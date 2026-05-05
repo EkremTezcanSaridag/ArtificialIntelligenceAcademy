@@ -2,23 +2,28 @@ import 'react-native-url-polyfill/auto';
 import { Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://ufmrxjgtgderafljgsgt.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmbXJ4amd0Z2RlcmFmbGpnc2d0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDEyNzQsImV4cCI6MjA5MzQ3NzI3NH0.lv77ucbr_kQYF9Glg0nu4UK2aITdSRM3ejHADEaV73A';
+// Sizin Yeni Supabase Bilgileriniz
+const SUPABASE_URL = 'https://xdomyuvycsvqttzkqqno.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_ehmc2VEj97HvFBe6l2GIcA_qng5Uxqt';
+const OCR_API_KEY = 'K84237148488957'; 
+
+const isNode = typeof process !== 'undefined' && process.versions != null && process.versions.node != null;
+
+class DummyWebSocket {
+  constructor() {}
+  send() {}
+  close() {}
+  addEventListener() {}
+  removeEventListener() {}
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
+  auth: { persistSession: true, autoRefreshToken: true },
+  realtime: {
+    params: { eventsPerSecond: 0 },
+    ...(isNode ? { transport: DummyWebSocket as any } : {}),
   },
 });
-
-const getBackendUrl = () => {
-  // Telefonunuzun ve bilgisayarınızın aynı Wi-Fi ağında (10.27.6.20) olması gerekir.
-  // Eğer ağ değiştirirseniz buradaki IP'yi ipconfig ile güncelleyebilirsiniz.
-  return 'http://10.27.6.20:8000';
-};
-
-const BACKEND_URL = getBackendUrl();
 
 export interface OCRResponse {
   status: string;
@@ -30,7 +35,13 @@ export interface OCRResponse {
   };
 }
 
-export const uploadInvoice = async (uri: string, filename: string, type: string, category: string): Promise<OCRResponse> => {
+export const uploadInvoice = async (
+  uri: string, 
+  filename: string, 
+  mimeType: string, 
+  category: string,
+  documentType: 'warranty' | 'invoice' = 'warranty'
+): Promise<OCRResponse> => {
   const formData = new FormData();
   
   if (Platform.OS === 'web') {
@@ -41,29 +52,53 @@ export const uploadInvoice = async (uri: string, filename: string, type: string,
       formData.append('file', {
         uri,
         name: filename,
-        type: type,
+        type: mimeType,
       } as any);
   }
   
-  formData.append('category', category);
+  formData.append('apikey', OCR_API_KEY);
+  formData.append('language', 'tur');
+  formData.append('isOverlayRequired', 'false');
+  formData.append('filetype', 'JPG'); 
 
   try {
-    const response = await fetch(`${BACKEND_URL}/api/upload`, {
+    console.log("OCR.space üzerinden analiz başlatılıyor...");
+    const ocrResponse = await fetch('https://api.ocr.space/parse/image', {
       method: 'POST',
       body: formData,
-      headers: {
-        'Accept': 'application/json',
-      },
     });
 
-    if (!response.ok) {
-        const errData = await response.json().catch(() => null);
-        throw new Error(errData?.detail || 'Yükleme sırasında hata oluştu');
+    const ocrData = await ocrResponse.json();
+
+    if (ocrData.OCRExitCode !== 1) {
+      const errorDetail = ocrData.ErrorMessage || ocrData.ErrorDetails || 'Metin okunamadı.';
+      throw new Error('OCR Hatası: ' + errorDetail);
     }
 
-    return await response.json();
+    const extractedText = ocrData.ParsedResults[0].ParsedText;
+
+    const { error: dbError } = await supabase
+      .from('invoices')
+      .insert([
+        {
+          filename: filename,
+          raw_text: extractedText,
+          category: category,
+          type: documentType
+        }
+      ]);
+
+    if (dbError) {
+        throw dbError;
+    }
+
+    return {
+      status: "success",
+      message: "Belge başarıyla analiz edildi ve sizin veri tabanınıza kaydedildi.",
+      data: { filename, text: extractedText, category }
+    };
   } catch (error: any) {
-    console.error("Upload Error:", error);
+    console.error("OCR/DB Error:", error);
     throw error;
   }
 };
@@ -74,10 +109,20 @@ export const fetchInvoices = async () => {
     .select('*')
     .order('created_at', { ascending: false });
     
+  if (error) throw error;
+  return data;
+};
+
+export const deleteInvoice = async (id: string) => {
+  console.log(`Silme işlemi başlatıldı, ID: ${id}`);
+  const { error } = await supabase
+    .from('invoices')
+    .delete()
+    .eq('id', id);
+    
   if (error) {
-    console.error("Fetch Error Detail:", JSON.stringify(error), "Message:", error.message);
+    console.error("Supabase Silme Hatası:", error.message);
     throw error;
   }
-  
-  return data;
+  return true;
 };

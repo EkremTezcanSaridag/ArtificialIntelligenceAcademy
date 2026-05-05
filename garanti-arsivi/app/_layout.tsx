@@ -41,7 +41,7 @@ function TabLayout() {
             paddingBottom: 10,
             paddingTop: 10
           },
-          tabBarActiveTintColor: '#10b981',
+          tabBarActiveTintColor: '#6366f1',
           tabBarInactiveTintColor: isDark ? '#52525b' : '#a1a1aa',
           sceneStyle: { backgroundColor: isDark ? '#09090b' : '#f4f4f5' }
         }}
@@ -51,7 +51,7 @@ function TabLayout() {
           options={{ 
             title: 'Garanti Belgelerim/Faturalarım', 
             tabBarIcon: ({ color, size, focused }) => (
-                <View style={focused ? { backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: 8, borderRadius: 16 } : { padding: 8 }}>
+                <View style={focused ? { backgroundColor: 'rgba(99, 102, 241, 0.15)', padding: 8, borderRadius: 16 } : { padding: 8 }}>
                     <Ionicons name="shield-checkmark" size={size} color={color} />
                 </View>
             )
@@ -62,7 +62,7 @@ function TabLayout() {
           options={{ 
             title: 'Belge Ekle', 
             tabBarIcon: ({ color, size, focused }) => (
-                <View style={focused ? { backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: 8, borderRadius: 16 } : { padding: 8 }}>
+                <View style={focused ? { backgroundColor: 'rgba(99, 102, 241, 0.15)', padding: 8, borderRadius: 16 } : { padding: 8 }}>
                     <Ionicons name="add-circle" size={size} color={color} />
                 </View>
             )
