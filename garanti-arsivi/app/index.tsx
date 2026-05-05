@@ -86,7 +86,7 @@ export default function HomeScreen() {
             <View style={styles.cardHeader}>
               <Text style={styles.productName}>{item.filename}</Text>
               <LinearGradient 
-                 colors={['#8b5cf6', '#6d28d9']} 
+                 colors={['#10b981', '#047857']} 
                  style={styles.categoryBadge}
                  start={{ x: 0, y: 0 }}
                  end={{ x: 1, y: 0 }}
@@ -101,11 +101,11 @@ export default function HomeScreen() {
             
             <View style={styles.dateWrapper}>
               <View style={styles.dateBox}>
-                <Text style={styles.dateLabel}>Kayıt Tarihi</Text>
+                <Text style={styles.dateLabel}>KAYIT TARİHİ</Text>
                 <Text style={styles.dateValue}>{formatDate(item.created_at)}</Text>
               </View>
               <View style={styles.premiumIndicator}>
-                 <Ionicons name="shield-checkmark" size={20} color="#a78bfa" />
+                 <Ionicons name="shield-checkmark" size={20} color="#10b981" />
               </View>
             </View>
           </LinearGradient>
@@ -117,7 +117,7 @@ export default function HomeScreen() {
   if (loading && !refreshing) {
     return (
         <LinearGradient colors={['#0f1016', '#000000']} style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-            <ActivityIndicator size="large" color="#8b5cf6" />
+            <ActivityIndicator size="large" color="#10b981" />
         </LinearGradient>
     )
   }
@@ -127,21 +127,27 @@ export default function HomeScreen() {
       {/* Premium Header Decoration */}
       <View style={styles.headerGlow} />
       
+      <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        <View style={styles.pageHeader}>
+          <Text style={styles.pageDescription}>Garanti belgeleriniz ve faturalarınız bu alanda listelenmektedir.</Text>
+        </View>
+      </Animated.View>
+
       <FlatList
         data={warranties}
         keyExtractor={item => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10b981" />
         }
         ListEmptyComponent={
           <Animated.View style={[styles.emptyState, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-             <LinearGradient colors={['rgba(139, 92, 246, 0.1)', 'transparent']} style={styles.emptyIconBg}>
-                <Ionicons name="cloud-offline-outline" size={80} color="#3f3f46" />
+             <LinearGradient colors={['rgba(16, 185, 129, 0.1)', 'transparent']} style={styles.emptyIconBg}>
+                <Ionicons name="folder-open-outline" size={80} color="#10b981" />
              </LinearGradient>
              <Text style={styles.emptyTitle}>Kayıt Bulunamadı</Text>
-             <Text style={styles.emptyText}>Henüz bir garanti belgesi yüklemediniz.{'\n'}Sağ alttaki + butonundan ekleyebilirsiniz.</Text>
+             <Text style={styles.emptyText}>Henüz bir garanti belgesi veya fatura yüklemediniz.{'\n'}Alt menüden "Belge Ekle" sekmesine giderek yükleyebilirsiniz.</Text>
           </Animated.View>
         }
       />
@@ -151,8 +157,10 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#09090b' },
-  headerGlow: { position: 'absolute', top: -100, left: -50, width: 300, height: 300, backgroundColor: '#8b5cf6', borderRadius: 150, opacity: 0.15, filter: 'blur(40px)' },
-  list: { padding: 20, paddingTop: 30, paddingBottom: 100 },
+  headerGlow: { position: 'absolute', top: -100, left: -50, width: 300, height: 300, backgroundColor: '#10b981', borderRadius: 150, opacity: 0.1, filter: 'blur(40px)' },
+  pageHeader: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 10 },
+  pageDescription: { color: '#a1a1aa', fontSize: 14, fontWeight: '500', lineHeight: 22 },
+  list: { padding: 20, paddingTop: 10, paddingBottom: 100 },
   cardContainer: { borderRadius: 24, marginBottom: 20, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   card: { padding: 24 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
@@ -162,10 +170,10 @@ const styles = StyleSheet.create({
   storeName: { color: '#a1a1aa', fontSize: 13, marginBottom: 24, fontWeight: '500' },
   dateWrapper: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
   dateBox: { flex: 1 },
-  dateLabel: { color: '#71717a', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4, fontWeight: '700' },
+  dateLabel: { color: '#71717a', fontSize: 11, letterSpacing: 1, marginBottom: 4, fontWeight: '800' },
   dateValue: { color: '#e4e4e7', fontSize: 15, fontWeight: '600' },
-  premiumIndicator: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(139, 92, 246, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.3)' },
-  emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 80 },
+  premiumIndicator: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(16, 185, 129, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)' },
+  emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 40 },
   emptyIconBg: { width: 160, height: 160, borderRadius: 80, justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
   emptyTitle: { color: '#e4e4e7', fontSize: 22, fontWeight: '800', marginBottom: 8, letterSpacing: 0.5 },
   emptyText: { color: '#71717a', textAlign: 'center', fontSize: 15, fontWeight: '500', lineHeight: 22 }

@@ -86,6 +86,11 @@ export default function AddScreen() {
     <LinearGradient colors={['#0f1016', '#000000']} style={{ flex: 1 }}>
       <View style={styles.headerGlow} />
       <ScrollView contentContainerStyle={styles.container}>
+        
+        <View style={styles.pageHeader}>
+          <Text style={styles.pageDescription}>Garanti belgenizi veya faturanızı yüklemek için aşağıdaki butonları kullanabilirsiniz.</Text>
+        </View>
+
         {!image ? (
           <View style={styles.buttonContainer}>
             <Animated.View style={{ width: '100%', marginBottom: 20, transform: [{ scale: scaleAnim1 }] }}>
@@ -96,7 +101,7 @@ export default function AddScreen() {
                 style={{ width: '100%' }}
               >
                 <LinearGradient 
-                  colors={['#8b5cf6', '#6d28d9']} 
+                  colors={['#10b981', '#047857']} 
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   style={styles.actionButton}
                 >
@@ -138,7 +143,7 @@ export default function AddScreen() {
                 return (
                   <Pressable key={cat} onPress={() => setSelectedCategory(cat)}>
                     <LinearGradient
-                      colors={isActive ? ['#8b5cf6', '#6d28d9'] : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
+                      colors={isActive ? ['#10b981', '#047857'] : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
                       style={[styles.categoryBadge, !isActive && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }]}
                     >
                       <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>{cat}</Text>
@@ -150,7 +155,7 @@ export default function AddScreen() {
 
             {result && (
               <BlurView intensity={20} tint="dark" style={styles.resultBoxWrapper}>
-                <LinearGradient colors={['rgba(139, 92, 246, 0.15)', 'rgba(109, 40, 217, 0.05)']} style={styles.resultBox}>
+                <LinearGradient colors={['rgba(16, 185, 129, 0.15)', 'rgba(4, 120, 87, 0.05)']} style={styles.resultBox}>
                   <Text style={styles.resultTitle}>Çıkarılan Metin (OCR Sonucu)</Text>
                   <Text style={styles.resultText}>{result}</Text>
                 </LinearGradient>
@@ -164,7 +169,7 @@ export default function AddScreen() {
               
               <Pressable style={{ flex: 2 }} onPress={handleUpload} disabled={loading}>
                 <LinearGradient 
-                  colors={loading ? ['#3f3f46', '#27272a'] : ['#8b5cf6', '#6d28d9']}
+                  colors={loading ? ['#3f3f46', '#27272a'] : ['#10b981', '#047857']}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
                 >
@@ -184,13 +189,15 @@ export default function AddScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 24, justifyContent: 'center' },
-  headerGlow: { position: 'absolute', top: '20%', right: -100, width: 300, height: 300, backgroundColor: '#8b5cf6', borderRadius: 150, opacity: 0.1, filter: 'blur(50px)' },
+  container: { flexGrow: 1, padding: 24, paddingTop: 10, justifyContent: 'center' },
+  pageHeader: { marginBottom: 30, alignItems: 'center' },
+  pageDescription: { color: '#a1a1aa', fontSize: 15, fontWeight: '500', lineHeight: 22, textAlign: 'center' },
+  headerGlow: { position: 'absolute', top: '20%', right: -100, width: 300, height: 300, backgroundColor: '#10b981', borderRadius: 150, opacity: 0.1, filter: 'blur(50px)' },
   buttonContainer: { alignItems: 'center', width: '100%' },
   blurButtonContainer: { borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  actionButton: { width: '100%', padding: 24, borderRadius: 24, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 16, shadowColor: '#8b5cf6', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 15, elevation: 8 },
+  actionButton: { width: '100%', padding: 24, borderRadius: 24, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 16, shadowColor: '#10b981', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 15, elevation: 8 },
   buttonText: { color: '#ffffff', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
-  previewContainer: { flex: 1, alignItems: 'center', marginTop: 10 },
+  previewContainer: { flex: 1, alignItems: 'center', marginTop: 0 },
   imageWrapper: { width: '100%', borderRadius: 24, padding: 4, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: 28 },
   image: { width: '100%', height: 320, borderRadius: 20 },
   label: { color: '#a1a1aa', fontSize: 13, alignSelf: 'flex-start', marginBottom: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
@@ -199,13 +206,13 @@ const styles = StyleSheet.create({
   categoryText: { color: '#a1a1aa', fontWeight: '700', fontSize: 14 },
   categoryTextActive: { color: '#ffffff', fontWeight: '800' },
   actionRow: { flexDirection: 'row', gap: 16, width: '100%', marginTop: 'auto', marginBottom: 20, paddingTop: 10 },
-  primaryButton: { padding: 20, borderRadius: 20, alignItems: 'center', justifyContent: 'center', shadowColor: '#8b5cf6', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
+  primaryButton: { padding: 20, borderRadius: 20, alignItems: 'center', justifyContent: 'center', shadowColor: '#10b981', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
   primaryButtonDisabled: { opacity: 0.8, shadowOpacity: 0 },
   primaryButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
   secondaryButton: { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', padding: 20, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   secondaryButtonText: { color: '#e4e4e7', fontSize: 16, fontWeight: '700' },
-  resultBoxWrapper: { width: '100%', borderRadius: 20, overflow: 'hidden', marginBottom: 28, borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.3)' },
+  resultBoxWrapper: { width: '100%', borderRadius: 20, overflow: 'hidden', marginBottom: 28, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)' },
   resultBox: { width: '100%', padding: 20 },
-  resultTitle: { color: '#a78bfa', fontWeight: '800', marginBottom: 10, letterSpacing: 0.5, fontSize: 13, textTransform: 'uppercase' },
+  resultTitle: { color: '#10b981', fontWeight: '800', marginBottom: 10, letterSpacing: 0.5, fontSize: 13, textTransform: 'uppercase' },
   resultText: { color: '#e4e4e7', fontSize: 15, lineHeight: 24 }
 });

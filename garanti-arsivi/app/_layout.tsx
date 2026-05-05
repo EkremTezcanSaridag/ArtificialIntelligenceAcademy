@@ -32,7 +32,7 @@ export default function Layout() {
             paddingBottom: 10,
             paddingTop: 10
           },
-          tabBarActiveTintColor: '#a78bfa',
+          tabBarActiveTintColor: '#10b981',
           tabBarInactiveTintColor: '#52525b',
           sceneStyle: { backgroundColor: '#09090b' }
         }}
@@ -42,7 +42,7 @@ export default function Layout() {
           options={{ 
             title: 'Garantilerim', 
             tabBarIcon: ({ color, size, focused }) => (
-                <View style={focused ? { backgroundColor: 'rgba(139, 92, 246, 0.15)', padding: 8, borderRadius: 16 } : { padding: 8 }}>
+                <View style={focused ? { backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: 8, borderRadius: 16 } : { padding: 8 }}>
                     <Ionicons name="shield-checkmark" size={size} color={color} />
                 </View>
             )
@@ -51,10 +51,10 @@ export default function Layout() {
         <Tabs.Screen 
           name="add" 
           options={{ 
-            title: 'Tarayıcı', 
+            title: 'Belge Ekle', 
             tabBarIcon: ({ color, size, focused }) => (
-                <View style={focused ? { backgroundColor: 'rgba(139, 92, 246, 0.15)', padding: 8, borderRadius: 16 } : { padding: 8 }}>
-                    <Ionicons name="scan" size={size} color={color} />
+                <View style={focused ? { backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: 8, borderRadius: 16 } : { padding: 8 }}>
+                    <Ionicons name="add-circle" size={size} color={color} />
                 </View>
             )
           }} 
