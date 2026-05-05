@@ -5,7 +5,12 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = 'https://ufmrxjgtgderafljgsgt.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmbXJ4amd0Z2RlcmFmbGpnc2d0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDEyNzQsImV4cCI6MjA5MzQ3NzI3NH0.lv77ucbr_kQYF9Glg0nu4UK2aITdSRM3ejHADEaV73A';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
 
 const getBackendUrl = () => {
   // Telefonunuzun ve bilgisayarınızın aynı Wi-Fi ağında (10.27.6.20) olması gerekir.
