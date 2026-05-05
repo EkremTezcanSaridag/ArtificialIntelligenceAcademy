@@ -1,31 +1,40 @@
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ThemeProvider, DarkTheme } from '@react-navigation/native';
+import { ThemeProvider as NavThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { View } from 'react-native';
+import { View, Pressable } from 'react-native';
+import { ThemeProvider as CustomThemeProvider, useTheme } from '../src/context/ThemeContext';
 
-export default function Layout() {
+function TabLayout() {
+  const { isDark, toggleTheme } = useTheme();
+
   return (
-    <ThemeProvider value={DarkTheme}>
-      <StatusBar style="light" />
+    <NavThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Tabs
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#09090b',
+            backgroundColor: isDark ? '#09090b' : '#ffffff',
             borderBottomWidth: 1,
-            borderBottomColor: 'rgba(255,255,255,0.05)',
+            borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
             elevation: 0,
             shadowOpacity: 0
           },
-          headerTintColor: '#ffffff',
+          headerTintColor: isDark ? '#ffffff' : '#000000',
+          headerTitleAlign: 'center',
           headerTitleStyle: {
             fontWeight: '900',
             letterSpacing: 0.5,
-            fontSize: 20
+            fontSize: 18
           },
+          headerRight: () => (
+             <Pressable onPress={toggleTheme} style={{ marginRight: 16, padding: 8 }}>
+                <Ionicons name={isDark ? "sunny" : "moon"} size={24} color={isDark ? "#ffffff" : "#000000"} />
+             </Pressable>
+          ),
           tabBarStyle: {
-            backgroundColor: 'rgba(9, 9, 11, 0.95)',
-            borderTopColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: isDark ? 'rgba(9, 9, 11, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+            borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
             position: 'absolute',
             elevation: 0,
             height: 65,
@@ -33,14 +42,14 @@ export default function Layout() {
             paddingTop: 10
           },
           tabBarActiveTintColor: '#10b981',
-          tabBarInactiveTintColor: '#52525b',
-          sceneStyle: { backgroundColor: '#09090b' }
+          tabBarInactiveTintColor: isDark ? '#52525b' : '#a1a1aa',
+          sceneStyle: { backgroundColor: isDark ? '#09090b' : '#f4f4f5' }
         }}
       >
         <Tabs.Screen 
           name="index" 
           options={{ 
-            title: 'Garantilerim', 
+            title: 'Garanti Belgelerim/Faturalarım', 
             tabBarIcon: ({ color, size, focused }) => (
                 <View style={focused ? { backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: 8, borderRadius: 16 } : { padding: 8 }}>
                     <Ionicons name="shield-checkmark" size={size} color={color} />
@@ -60,6 +69,14 @@ export default function Layout() {
           }} 
         />
       </Tabs>
-    </ThemeProvider>
+    </NavThemeProvider>
+  );
+}
+
+export default function Layout() {
+  return (
+    <CustomThemeProvider>
+      <TabLayout />
+    </CustomThemeProvider>
   );
 }
