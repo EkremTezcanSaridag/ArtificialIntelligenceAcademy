@@ -40,7 +40,8 @@ export const uploadInvoice = async (
   filename: string, 
   mimeType: string, 
   category: string,
-  documentType: 'warranty' | 'invoice' = 'warranty'
+  documentType: 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' = 'warranty',
+  additionalText?: string
 ): Promise<OCRResponse> => {
   const formData = new FormData();
   
@@ -76,13 +77,14 @@ export const uploadInvoice = async (
     }
 
     const extractedText = ocrData.ParsedResults[0].ParsedText;
+    const finalText = additionalText ? `${additionalText}\n\n--- OCR Metni ---\n${extractedText}` : extractedText;
 
     const { error: dbError } = await supabase
       .from('invoices')
       .insert([
         {
           filename: filename,
-          raw_text: extractedText,
+          raw_text: finalText,
           category: category,
           type: documentType
         }
@@ -125,4 +127,29 @@ export const deleteInvoice = async (id: string) => {
     throw error;
   }
   return true;
+};
+
+export const addManualRecord = async (
+  title: string,
+  amount: string,
+  dueDate: string,
+  category: string,
+  type: string
+) => {
+  const { data, error } = await supabase
+    .from('invoices')
+    .insert([
+      {
+        filename: title,
+        raw_text: `Tutar: ${amount} TL\nTarih: ${dueDate}`,
+        category: category,
+        type: type
+      }
+    ]);
+
+  if (error) {
+    console.error("Manuel Kayıt Ekleme Hatası:", error.message);
+    throw error;
+  }
+  return data;
 };

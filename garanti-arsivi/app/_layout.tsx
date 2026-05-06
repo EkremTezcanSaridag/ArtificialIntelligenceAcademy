@@ -28,7 +28,7 @@ function TabLayout() {
             fontSize: 18
           },
           headerRight: () => (
-             <Pressable onPress={toggleTheme} style={{ marginRight: 16, padding: 8 }}>
+             <Pressable onPress={toggleTheme} style={{ marginRight: 24, justifyContent: 'center', alignItems: 'center' }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Ionicons name={isDark ? "sunny" : "moon"} size={24} color={isDark ? "#ffffff" : "#000000"} />
              </Pressable>
           ),
@@ -49,7 +49,7 @@ function TabLayout() {
         <Tabs.Screen 
           name="index" 
           options={{ 
-            title: 'Garanti Belgelerim/Faturalarım', 
+            title: 'Garanti Arşivi', 
             tabBarIcon: ({ color, size, focused }) => (
                 <View style={focused ? { backgroundColor: 'rgba(99, 102, 241, 0.15)', padding: 8, borderRadius: 16 } : { padding: 8 }}>
                     <Ionicons name="shield-checkmark" size={size} color={color} />
@@ -60,12 +60,9 @@ function TabLayout() {
         <Tabs.Screen 
           name="add" 
           options={{ 
-            title: 'Belge Ekle', 
-            tabBarIcon: ({ color, size, focused }) => (
-                <View style={focused ? { backgroundColor: 'rgba(99, 102, 241, 0.15)', padding: 8, borderRadius: 16 } : { padding: 8 }}>
-                    <Ionicons name="add-circle" size={size} color={color} />
-                </View>
-            )
+            title: 'Yeni Kayıt Ekle',
+            href: null,
+            tabBarStyle: { display: 'none' }
           }} 
         />
       </Tabs>
