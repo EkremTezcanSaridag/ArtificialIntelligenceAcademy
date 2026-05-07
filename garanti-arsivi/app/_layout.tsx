@@ -53,6 +53,7 @@ function TabLayout() {
         <Tabs.Screen 
           name="index" 
           options={{ 
+            headerTitle: '',
             title: 'Garanti Arşivi', 
             tabBarIcon: ({ color }) => <Ionicons name="shield-checkmark" size={26} color={color} />,
             tabBarLabelStyle: {
