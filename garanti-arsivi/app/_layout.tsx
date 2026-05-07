@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider as NavThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, Platform } from 'react-native';
 import { ThemeProvider as CustomThemeProvider, useTheme } from '../src/context/ThemeContext';
 
 function TabLayout() {
@@ -33,13 +33,17 @@ function TabLayout() {
              </Pressable>
           ),
           tabBarStyle: {
-            backgroundColor: isDark ? 'rgba(9, 9, 11, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+            backgroundColor: isDark ? '#09090b' : '#ffffff',
             borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-            position: 'absolute',
-            elevation: 0,
-            height: 65,
-            paddingBottom: 10,
-            paddingTop: 10
+            borderTopWidth: 1,
+            height: Platform.OS === 'ios' ? 80 : 65,
+            paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+            paddingTop: 8,
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.05,
+            shadowRadius: 10,
           },
           tabBarActiveTintColor: '#6366f1',
           tabBarInactiveTintColor: isDark ? '#52525b' : '#a1a1aa',
@@ -50,11 +54,24 @@ function TabLayout() {
           name="index" 
           options={{ 
             title: 'Garanti Arşivi', 
-            tabBarIcon: ({ color, size, focused }) => (
-                <View style={focused ? { backgroundColor: 'rgba(99, 102, 241, 0.15)', padding: 8, borderRadius: 16 } : { padding: 8 }}>
-                    <Ionicons name="shield-checkmark" size={size} color={color} />
-                </View>
-            )
+            tabBarIcon: ({ color }) => <Ionicons name="shield-checkmark" size={26} color={color} />,
+            tabBarLabelStyle: {
+              fontSize: 12,
+              fontWeight: '700',
+              marginTop: 4
+            }
+          }} 
+        />
+        <Tabs.Screen 
+          name="cards" 
+          options={{ 
+            title: 'Kartlarım', 
+            tabBarIcon: ({ color }) => <Ionicons name="card" size={26} color={color} />,
+            tabBarLabelStyle: {
+              fontSize: 12,
+              fontWeight: '700',
+              marginTop: 4
+            }
           }} 
         />
         <Tabs.Screen 

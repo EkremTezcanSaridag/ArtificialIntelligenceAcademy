@@ -1,6 +1,6 @@
 import {
   View, Text, StyleSheet, FlatList, ActivityIndicator,
-  RefreshControl, Animated, Pressable, Dimensions, Platform, ScrollView
+  RefreshControl, Animated, Pressable, Dimensions, Platform, ScrollView, Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -30,7 +30,7 @@ const TABS: TabConfig[] = [
   { id: 'mtv',       label: 'MTV',            icon: 'car-sport',        color: '#f59e0b', colors: ['#f59e0b', '#d97706'] },
   { id: 'konut',     label: 'Konut Vergisi',  icon: 'home',             color: '#10b981', colors: ['#10b981', '#059669'] },
   { id: 'kontrat',   label: 'Kontratlar',     icon: 'document-text',    color: '#8b5cf6', colors: ['#8b5cf6', '#7c3aed'] },
-  { id: 'kredi',     label: 'Borçlarım',      icon: 'card',             color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
+  { id: 'kredi',     label: 'Borçlarım',      icon: 'wallet',           color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
 ];
 
 export default function HomeScreen() {
@@ -38,6 +38,9 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('warranty');
+  const [planModalVisible, setPlanModalVisible] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<any[] | null>(null);
+  const [currentPlanTitle, setCurrentPlanTitle] = useState('');
   const { isDark } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -140,16 +143,42 @@ export default function HomeScreen() {
     return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear()}`;
   };
 
+  const generatePaymentPlan = (rawText: string) => {
+    if (!rawText) return null;
+    const tutarMatch = rawText.match(/Tutar:\s*([\d.,]+)/);
+    const vadeMatch = rawText.match(/Vade:\s*(\d+)/);
+    const tarihMatch = rawText.match(/Tarih:\s*([\d.]+)|Günü:\s*([\d.]+)/);
+    
+    if (!tutarMatch || !vadeMatch || !tarihMatch) return null;
+    
+    const tutar = tutarMatch[1];
+    const vade = parseInt(vadeMatch[1], 10);
+    const tarihStr = tarihMatch[1] || tarihMatch[2]; 
+    
+    const [day, month, year] = tarihStr.split('.').map(Number);
+    let plan = [];
+    let currentDate = new Date(year, month - 1, day);
+    
+    for (let i = 0; i < vade; i++) {
+      const fDate = `${currentDate.getDate().toString().padStart(2, '0')}.${(currentDate.getMonth() + 1).toString().padStart(2, '0')}.${currentDate.getFullYear()}`;
+      plan.push({ id: i.toString(), date: fDate, amount: tutar, status: 'Ödenmedi' });
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    return plan;
+  };
+
   const getSubtitle = (item: any) => {
     if (item.type === 'mtv') return 'Motorlu Taşıt Vergisi';
     if (item.type === 'konut') return 'Konut Vergisi';
     if (item.type === 'kontrat') return item.category || 'Kontrat';
     if (item.type === 'kredi') return 'Borç Kaydı';
+    if (item.type === 'kart') return 'Kart Kaydı';
     return item.category || 'Diğer';
   };
 
   const renderItem = ({ item }: { item: any }) => {
     const tabCfg = TABS.find(t => t.id === (item.type || 'warranty')) || TABS[0];
+
     return (
       <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <Pressable
@@ -176,6 +205,23 @@ export default function HomeScreen() {
                    <View style={styles.dot} />
                    <Text style={[styles.dateValue, { color: isDark ? '#71717a' : '#a1a1aa' }]}>{formatDate(item.created_at)}</Text>
                 </View>
+                {item.type === 'kredi' && item.raw_text?.includes('Vade:') && (
+                  <Pressable 
+                    onPress={() => {
+                      const plan = generatePaymentPlan(item.raw_text);
+                      if (plan) {
+                        setCurrentPlan(plan);
+                        setCurrentPlanTitle(item.filename);
+                        setPlanModalVisible(true);
+                      } else {
+                        Alert.alert('Hata', 'Ödeme planı oluşturulamadı. Veri eksik.');
+                      }
+                    }}
+                    style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: tabCfg.color + '22', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}
+                  >
+                    <Text style={{ color: tabCfg.color, fontSize: 11, fontWeight: '700' }}>Ödeme Planını Gör</Text>
+                  </Pressable>
+                )}
              </View>
 
              <Pressable
@@ -261,7 +307,7 @@ export default function HomeScreen() {
         ListEmptyComponent={
           <Animated.View style={[styles.emptyState, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
             <View style={styles.emptyIconContainer}>
-              <LinearGradient colors={[activeTabConfig.color + '33', 'transparent']} style={styles.emptyIconBg} />
+              <View style={[styles.emptyIconBg, { backgroundColor: activeTabConfig.color, opacity: 0.15 }]} />
               <Ionicons name={activeTabConfig.icon as any} size={72} color={activeTabConfig.color} style={styles.emptyIcon} />
             </View>
             <Text style={[styles.emptyTitle, { color: isDark ? '#ffffff' : '#09090b' }]}>
@@ -283,6 +329,40 @@ export default function HomeScreen() {
           <Ionicons name="add" size={30} color="#fff" />
         </LinearGradient>
       </Pressable>
+
+      {/* Plan Modal */}
+      <Modal visible={planModalVisible} animationType="slide" transparent={true}>
+        <BlurView intensity={isDark ? 50 : 80} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#18181b' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#000' }]}>Ödeme Planı</Text>
+                <Text style={styles.modalSubtitle}>{currentPlanTitle}</Text>
+              </View>
+              <Pressable onPress={() => setPlanModalVisible(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={24} color={isDark ? '#a1a1aa' : '#52525b'} />
+              </Pressable>
+            </View>
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+              {currentPlan?.map((p, index) => (
+                <View key={p.id} style={[styles.planRow, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+                  <View style={styles.planDateCol}>
+                    <Text style={[styles.planMonth, { color: isDark ? '#fff' : '#000' }]}>{index + 1}. Taksit</Text>
+                    <Text style={styles.planDateText}>{p.date}</Text>
+                  </View>
+                  <View style={styles.planAmountCol}>
+                    <Text style={[styles.planAmount, { color: isDark ? '#fff' : '#000' }]}>{p.amount} TL</Text>
+                    <View style={styles.planStatusBadge}>
+                      <Text style={styles.planStatusText}>{p.status}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -334,6 +414,20 @@ const styles = StyleSheet.create({
   emptyIcon: { zIndex: 1 },
   emptyTitle: { fontSize: 24, fontWeight: '900', marginBottom: 12, letterSpacing: -0.5 },
   emptyText: { color: '#71717a', textAlign: 'center', fontSize: 16, fontWeight: '500', lineHeight: 24, marginBottom: 12 },
-  fab: { position: 'absolute', bottom: 100, right: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 10 },
-  fabGradient: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center' }
+  fab: { position: 'absolute', bottom: 100, right: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 16, borderRadius: 32, backgroundColor: 'transparent' },
+  fabGradient: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center' },
+  modalContainer: { flex: 1, justifyContent: 'flex-end' },
+  modalContent: { height: '80%', borderTopLeftRadius: 32, borderTopRightRadius: 32, borderWidth: 1, padding: 24, paddingBottom: 40 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
+  modalTitle: { fontSize: 24, fontWeight: '900', letterSpacing: -0.5, marginBottom: 4 },
+  modalSubtitle: { fontSize: 14, color: '#71717a', fontWeight: '600' },
+  modalCloseBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(113,113,122,0.1)', justifyContent: 'center', alignItems: 'center' },
+  planRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1 },
+  planDateCol: { flex: 1 },
+  planMonth: { fontSize: 15, fontWeight: '800', marginBottom: 4 },
+  planDateText: { fontSize: 13, color: '#a1a1aa', fontWeight: '600' },
+  planAmountCol: { alignItems: 'flex-end' },
+  planAmount: { fontSize: 16, fontWeight: '900', letterSpacing: -0.3, marginBottom: 6 },
+  planStatusBadge: { backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  planStatusText: { color: '#ef4444', fontSize: 10, fontWeight: '800', textTransform: 'uppercase' }
 });

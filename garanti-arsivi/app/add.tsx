@@ -15,7 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 const { width } = Dimensions.get('window');
 
-type DocType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi';
+type DocType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'kart';
 
 interface DocTypeConfig {
   id: DocType;
@@ -52,8 +52,12 @@ const DOC_TYPES: DocTypeConfig[] = [
     titleLabel: 'Taraf / Kişi Adı', amountLabel: 'Aylık Bedel (TL)', dateLabel: 'Bitiş Tarihi'
   },
   {
-    id: 'kredi', label: 'Borçlarım', icon: 'card', colors: ['#ef4444', '#dc2626'], color: '#ef4444', categories: ['Konut Kredisi', 'Taşıt Kredisi', 'İhtiyaç Kredisi', 'Kredi Kartı', 'Elden Borç', 'Diğer'], description: 'Kredi & borç belgesi',
+    id: 'kredi', label: 'Borçlarım', icon: 'wallet', colors: ['#ef4444', '#dc2626'], color: '#ef4444', categories: ['Konut Kredisi', 'Taşıt Kredisi', 'İhtiyaç Kredisi', 'KYK Kredisi', 'Elden Borç', 'Diğer'], description: 'Kredi & borç belgesi',
     titleLabel: 'Banka / Kurum Adı', amountLabel: 'Tutar (TL)', dateLabel: 'Son Ödeme Tarihi'
+  },
+  {
+    id: 'kart', label: 'Kartlarım', icon: 'card', colors: ['#ec4899', '#be185d'], color: '#ec4899', categories: ['Kredi Kartı', 'Banka Kartı', 'Sanal Kart', 'Yemek Kartı', 'Diğer'], description: 'Fiziksel ve dijital kartlar',
+    titleLabel: 'Banka / Kart Adı', amountLabel: 'Kart Limiti / Bakiye (TL)', dateLabel: 'Son Kullanma Tarihi'
   },
 ];
 
@@ -71,11 +75,15 @@ export default function AddScreen() {
   const [notifyBefore, setNotifyBefore] = useState<'1_week' | '1_month' | 'both' | 'none'>('1_week');
   const { isDark } = useTheme();
 
-  // Manual Form States
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  const [interestRate, setInterestRate] = useState('');
+  const [months, setMonths] = useState('');
+
+  const isDetailedCredit = selectedDocType.id === 'kredi' && ['Konut Kredisi', 'Taşıt Kredisi', 'İhtiyaç Kredisi', 'KYK Kredisi'].includes(selectedCategory);
 
   const onChangeDate = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') setShowDatePicker(false);
@@ -87,6 +95,7 @@ export default function AddScreen() {
     if (selectedDocType.id === 'kredi') {
       if (selectedCategory === 'Elden Borç') return 'Kişi Adı / Borçlu';
       if (selectedCategory === 'Kredi Kartı') return 'Banka / Kart Adı';
+      if (selectedCategory === 'KYK Kredisi') return 'Öğrenim Kredisi / Kurum';
       return 'Banka Adı';
     }
     if (selectedDocType.id === 'kontrat') {
@@ -95,6 +104,7 @@ export default function AddScreen() {
       if (selectedCategory === 'İş Sözleşmesi') return 'Firma / Şirket Adı';
       return 'Taraf / Kişi Adı';
     }
+    if (selectedDocType.id === 'kart') return 'Banka veya Kart Adı';
     return selectedDocType.titleLabel;
   };
 
@@ -102,12 +112,14 @@ export default function AddScreen() {
     if (selectedDocType.id === 'kredi') {
       if (selectedCategory === 'Kredi Kartı') return 'Güncel Borç (TL)';
       if (selectedCategory === 'Elden Borç') return 'Verilen / Alınan Tutar (TL)';
+      if (selectedCategory === 'KYK Kredisi') return 'Aylık Ödeme Tutarı (TL)';
       return 'Aylık Taksit Tutarı (TL)';
     }
     if (selectedDocType.id === 'kontrat') {
       if (selectedCategory === 'İş Sözleşmesi') return 'Maaş / Ücret (TL)';
       return 'Aylık Bedel (TL)';
     }
+    if (selectedDocType.id === 'kart') return 'Kart Limiti (TL)';
     return selectedDocType.amountLabel;
   };
 
@@ -117,6 +129,7 @@ export default function AddScreen() {
       if (selectedCategory === 'Kredi Kartı') return 'Son Ödeme Tarihi';
       return 'Taksit Ödeme Günü';
     }
+    if (selectedDocType.id === 'kart') return 'Son Kullanma Tarihi';
     return selectedDocType.dateLabel;
   };
 
@@ -139,7 +152,12 @@ export default function AddScreen() {
     }
     setLoading(true);
     try {
-      const additionalText = `Tutar: ${amount} TL\n${getDynamicDateLabel()}: ${formattedDate}`;
+      let additionalText = `Tutar: ${amount} TL\n${getDynamicDateLabel()}: ${formattedDate}`;
+      
+      if (isDetailedCredit) {
+         if (months) additionalText += `\nVade: ${months} Ay`;
+         if (interestRate) additionalText += `\nFaiz Oranı: %${interestRate}`;
+      }
 
       if (image) {
         const filename = title ? `${title}` : (image.split('/').pop() || 'belge.jpg');
@@ -156,7 +174,7 @@ export default function AddScreen() {
         }
         Alert.alert('Başarılı', 'Belge AI ile okundu ve kaydedildi!', [{ text: 'Tamam', onPress: () => router.push('/') }]);
       } else {
-        await addManualRecord(title, amount, formattedDate, selectedCategory, selectedDocType.id);
+        await addManualRecord(title, amount, formattedDate, selectedCategory, selectedDocType.id, additionalText);
         Alert.alert('Başarılı', 'Kayıt başarıyla eklendi!', [{ text: 'Tamam', onPress: () => router.push('/') }]);
       }
     } catch (error: any) {
@@ -270,6 +288,40 @@ export default function AddScreen() {
               onChange={onChangeDate}
               themeVariant={isDark ? "dark" : "light"}
             />
+          )}
+
+          {isDetailedCredit && (
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.inputLabel}>Vade (Ay)</Text>
+                <View style={[styles.inputWrapper, { marginBottom: 0, backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+                  <Ionicons name="time-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: isDark ? '#ffffff' : '#000000' }]}
+                    placeholder="36"
+                    placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
+                    keyboardType="numeric"
+                    value={months}
+                    onChangeText={setMonths}
+                  />
+                </View>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={styles.inputLabel}>Faiz (%)</Text>
+                <View style={[styles.inputWrapper, { marginBottom: 0, backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+                  <Ionicons name="stats-chart-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: isDark ? '#ffffff' : '#000000' }]}
+                    placeholder="1.99"
+                    placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
+                    keyboardType="numeric"
+                    value={interestRate}
+                    onChangeText={setInterestRate}
+                  />
+                </View>
+              </View>
+            </View>
           )}
 
           {/* Kategori */}
@@ -451,16 +503,16 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: 16, fontWeight: '500', height: '100%' },
   buttonContainer: { flexDirection: 'row', width: '100%', marginBottom: 32 },
   blurButtonContainer: { borderRadius: 24, overflow: 'hidden', borderWidth: 1 },
-  actionButton: { padding: 18, borderRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 8 },
+  actionButton: { padding: 18, borderRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 12 },
   actionButtonSecondary: { padding: 18, borderRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   buttonSubtitleSecondary: { color: '#a1a1aa', fontSize: 14, fontWeight: '500' },
-  imageWrapper: { width: '100%', borderRadius: 32, padding: 6, borderWidth: 1, marginBottom: 32, backgroundColor: 'rgba(0,0,0,0.02)', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
+  imageWrapper: { width: '100%', borderRadius: 32, padding: 6, borderWidth: 1, marginBottom: 32, backgroundColor: 'rgba(0,0,0,0.02)', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20 },
   image: { width: '100%', height: 320, borderRadius: 26 },
   editImageBtn: { position: 'absolute', top: 16, right: 16, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   sectionTitle: { color: '#a1a1aa', fontSize: 13, marginBottom: 14, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
   // Doc type cards (grid)
   docTypeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', marginBottom: 32 },
-  docTypeCardActive: { padding: 20, borderRadius: 28, alignItems: 'center', width: '100%', gap: 10, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 10 },
+  docTypeCardActive: { padding: 20, borderRadius: 28, alignItems: 'center', width: '100%', gap: 10, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16 },
   iconCircleWhite: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
   docTypeLabelActive: { fontSize: 14, fontWeight: '900', textAlign: 'center', color: '#ffffff', letterSpacing: -0.3 },
   docTypeDescActive: { fontSize: 11, fontWeight: '600', textAlign: 'center', color: 'rgba(255,255,255,0.8)', lineHeight: 16 },
@@ -471,14 +523,14 @@ const styles = StyleSheet.create({
   docTypeDescInactive: { fontSize: 11, fontWeight: '500', textAlign: 'center', lineHeight: 16 },
   // Category chips
   categoryContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 36 },
-  categoryBadgeActive: { paddingVertical: 14, paddingHorizontal: 20, borderRadius: 20, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 },
+  categoryBadgeActive: { paddingVertical: 14, paddingHorizontal: 20, borderRadius: 20, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
   categoryTextActive: { fontWeight: '800', fontSize: 14, color: '#ffffff' },
   categoryBadgeInactiveBlur: { borderRadius: 20, overflow: 'hidden' },
   categoryBadgeInactiveInner: { paddingVertical: 14, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.02)' },
   categoryTextInactive: { fontWeight: '600', fontSize: 14 },
   // Action
   actionRow: { width: '100%', marginTop: 'auto', paddingTop: 20 },
-  saveButton: { width: '100%', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 10 },
+  saveButton: { width: '100%', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.4, shadowRadius: 16, borderRadius: 24, backgroundColor: 'transparent' },
   saveButtonGradient: { flexDirection: 'row', padding: 22, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   saveButtonDisabled: { opacity: 0.7, shadowOpacity: 0 },
   saveButtonText: { color: '#ffffff', fontSize: 17, fontWeight: '800', letterSpacing: 0.5 },

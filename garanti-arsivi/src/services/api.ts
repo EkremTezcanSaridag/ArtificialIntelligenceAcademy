@@ -129,19 +129,33 @@ export const deleteInvoice = async (id: string) => {
   return true;
 };
 
+export const updateInvoiceText = async (id: string, newText: string) => {
+  const { error } = await supabase
+    .from('invoices')
+    .update({ raw_text: newText })
+    .eq('id', id);
+    
+  if (error) {
+    console.error("Supabase Güncelleme Hatası:", error.message);
+    throw error;
+  }
+  return true;
+};
+
 export const addManualRecord = async (
   title: string,
   amount: string,
   dueDate: string,
   category: string,
-  type: string
+  type: string,
+  additionalText?: string
 ) => {
   const { data, error } = await supabase
     .from('invoices')
     .insert([
       {
         filename: title,
-        raw_text: `Tutar: ${amount} TL\nTarih: ${dueDate}`,
+        raw_text: additionalText || `Tutar: ${amount} TL\nTarih: ${dueDate}`,
         category: category,
         type: type
       }
