@@ -253,7 +253,7 @@ export default function HomeScreen() {
 
       <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <View style={styles.pageHeader}>
-          <Text style={[styles.pageTitle, { color: activeTabConfig.color }]}>Dijital Arşiv</Text>
+          <Text style={[styles.pageTitle, { color: isDark ? '#ffffff' : '#09090b' }]}>Dijital Arşiv</Text>
           <Text style={styles.pageDescription}>Belgeleriniz yapay zeka güvencesiyle saklanıyor.</Text>
         </View>
       </Animated.View>
