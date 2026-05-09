@@ -7,6 +7,8 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, router } from 'expo-router';
 import { fetchInvoices, deleteInvoice } from '../src/services/api';
+import { registerForPushNotificationsAsync, scheduleReminderNotification } from '../src/services/notifications';
+import type { ReminderOption } from '../src/services/notifications';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../src/context/ThemeContext';
 import * as Haptics from 'expo-haptics';
@@ -14,7 +16,7 @@ import { Alert } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-type TabType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi';
+type TabType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'kart';
 
 interface TabConfig {
   id: TabType;
@@ -32,6 +34,7 @@ const TABS: TabConfig[] = [
   { id: 'konut',     label: 'Konut Vergisi',      shortLabel: 'konut vergisi',    icon: 'home',             color: '#10b981', colors: ['#10b981', '#059669'] },
   { id: 'kontrat',   label: 'Kontratlarım',       shortLabel: 'kontrat',          icon: 'document-text',    color: '#8b5cf6', colors: ['#8b5cf6', '#7c3aed'] },
   { id: 'kredi',     label: 'Borçlarım',          shortLabel: 'borç',             icon: 'wallet',           color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
+  { id: 'kart',      label: 'Kartlarım',          shortLabel: 'kart',             icon: 'card',             color: '#ec4899', colors: ['#ec4899', '#be185d'] },
 ];
 
 export default function HomeScreen() {
@@ -42,6 +45,7 @@ export default function HomeScreen() {
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<any[] | null>(null);
   const [currentPlanTitle, setCurrentPlanTitle] = useState('');
+  const [detailItem, setDetailItem] = useState<any>(null);
   const { isDark, toggleTheme } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -71,6 +75,42 @@ export default function HomeScreen() {
       const data = await fetchInvoices();
       setWarranties(data || []);
       startAnimations();
+      // Tüm belgeler için hatırlatma bildirimleri
+      if (Platform.OS !== 'web') {
+        try {
+          const items = (data || []).filter((item: any) => item.raw_text?.includes('Hatırlatma:'));
+          if (items.length > 0) {
+            await registerForPushNotificationsAsync();
+            for (const item of items) {
+              const reminderMatch = item.raw_text.match(/Hatırlatma:\s*(.+)/);
+              if (!reminderMatch) continue;
+              const reminders = reminderMatch[1].split(',') as ReminderOption[];
+              
+              // Tarih formatını bul (GG.AA.YYYY)
+              const datePatterns = [
+                /Son Kullanma Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                /Son Ödeme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                /Bitiş Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                /Satın Alma Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                /Taksit Ödeme Günü:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                /Geri Ödeme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+              ];
+              let targetDate: Date | null = null;
+              for (const pattern of datePatterns) {
+                const match = item.raw_text.match(pattern);
+                if (match) {
+                  targetDate = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+                  break;
+                }
+              }
+              if (targetDate && targetDate > new Date()) {
+                const tabCfg = TABS.find(t => t.id === item.type) || TABS[0];
+                await scheduleReminderNotification(item.filename, targetDate, reminders, tabCfg.label);
+              }
+            }
+          }
+        } catch (e) {}
+      }
     } catch (error) {
       console.error("Veri çekilemedi:", error);
     } finally {
@@ -173,7 +213,10 @@ export default function HomeScreen() {
     if (item.type === 'konut') return 'Konut Vergisi';
     if (item.type === 'kontrat') return item.category || 'Kontrat';
     if (item.type === 'kredi') return 'Borç Kaydı';
-    if (item.type === 'kart') return 'Kart Kaydı';
+    if (item.type === 'kart') {
+      const dateMatch = item.raw_text?.match(/Son Kullanma Tarihi:\s*(\d{2}\.\d{2}\.\d{4})/);
+      return dateMatch ? `SKT: ${dateMatch[1]}` : item.category || 'Kart';
+    }
     return item.category || 'Diğer';
   };
 
@@ -183,6 +226,7 @@ export default function HomeScreen() {
     return (
       <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <Pressable
+          onPress={() => setDetailItem(item)}
           style={({ pressed }) => [
             styles.cardContainer,
             { 
@@ -379,6 +423,57 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Detail Modal */}
+      <Modal visible={!!detailItem} animationType="slide" transparent={true}>
+        <BlurView intensity={isDark ? 50 : 80} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#18181b' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#000' }]}>{detailItem?.filename}</Text>
+                <Text style={styles.modalSubtitle}>{getSubtitle(detailItem || {})}</Text>
+              </View>
+              <Pressable onPress={() => setDetailItem(null)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={24} color={isDark ? '#a1a1aa' : '#52525b'} />
+              </Pressable>
+            </View>
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+              {/* Info rows */}
+              <View style={{ gap: 16 }}>
+                <View style={[styles.detailRow, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+                  <View style={styles.detailIconCol}>
+                    <Ionicons name="folder-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.detailLabel]}>Kategori</Text>
+                    <Text style={[styles.detailValue, { color: isDark ? '#fff' : '#000' }]}>{detailItem?.category || 'Belirtilmemiş'}</Text>
+                  </View>
+                </View>
+                <View style={[styles.detailRow, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+                  <View style={styles.detailIconCol}>
+                    <Ionicons name="calendar-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailLabel}>Oluşturulma Tarihi</Text>
+                    <Text style={[styles.detailValue, { color: isDark ? '#fff' : '#000' }]}>{formatDate(detailItem?.created_at)}</Text>
+                  </View>
+                </View>
+                {detailItem?.raw_text && (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Belge Detayları</Text>
+                    <View style={[styles.detailTextBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                      <Text style={[styles.detailRawText, { color: isDark ? '#d4d4d8' : '#3f3f46' }]}>
+                        {detailItem.raw_text}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -445,5 +540,11 @@ const styles = StyleSheet.create({
   planAmountCol: { alignItems: 'flex-end' },
   planAmount: { fontSize: 16, fontWeight: '900', letterSpacing: -0.3, marginBottom: 6 },
   planStatusBadge: { backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  planStatusText: { color: '#ef4444', fontSize: 10, fontWeight: '800', textTransform: 'uppercase' }
+  planStatusText: { color: '#ef4444', fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingBottom: 16, borderBottomWidth: 1 },
+  detailIconCol: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(113,113,122,0.1)', justifyContent: 'center', alignItems: 'center' },
+  detailLabel: { fontSize: 12, fontWeight: '700', color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: 0.5 },
+  detailValue: { fontSize: 16, fontWeight: '800', marginTop: 2 },
+  detailTextBox: { padding: 16, borderRadius: 16, borderWidth: 1 },
+  detailRawText: { fontSize: 14, fontWeight: '500', lineHeight: 22 },
 });

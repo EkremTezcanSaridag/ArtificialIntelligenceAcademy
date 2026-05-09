@@ -122,3 +122,61 @@ export async function scheduleWarrantyNotification(
     console.error('Notification scheduling error:', error);
   }
 }
+
+export type ReminderOption = '1_week' | '2_weeks' | '3_weeks' | '1_month' | '2_months' | '3_months';
+
+const REMINDER_DAYS: Record<ReminderOption, number> = {
+  '1_week': 7,
+  '2_weeks': 14,
+  '3_weeks': 21,
+  '1_month': 30,
+  '2_months': 60,
+  '3_months': 90,
+};
+
+const REMINDER_LABELS: Record<ReminderOption, string> = {
+  '1_week': '1 hafta',
+  '2_weeks': '2 hafta',
+  '3_weeks': '3 hafta',
+  '1_month': '1 ay',
+  '2_months': '2 ay',
+  '3_months': '3 ay',
+};
+
+export async function scheduleReminderNotification(
+  itemName: string,
+  targetDate: Date,
+  reminders: ReminderOption[],
+  docTypeLabel: string
+) {
+  if (reminders.length === 0) return;
+  if (isExpoGo && Platform.OS === 'android') return;
+
+  try {
+    const Notifications = require('expo-notifications');
+
+    for (const reminder of reminders) {
+      const daysBefore = REMINDER_DAYS[reminder];
+      const label = REMINDER_LABELS[reminder];
+      const triggerDate = new Date(targetDate);
+      triggerDate.setDate(triggerDate.getDate() - daysBefore);
+
+      if (triggerDate.getTime() > Date.now()) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `${docTypeLabel} Hatırlatma ⏰`,
+            body: `"${itemName}" için son tarihe ${label} kaldı.`,
+            data: { itemName, targetDate: targetDate.toISOString() },
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: triggerDate,
+          },
+        });
+        console.log(`Bildirim zamanlandı: ${itemName} → ${label} kala (${triggerDate.toLocaleDateString()})`);
+      }
+    }
+  } catch (error) {
+    console.error('Reminder notification scheduling error:', error);
+  }
+}

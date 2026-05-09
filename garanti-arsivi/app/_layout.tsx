@@ -66,12 +66,8 @@ function TabLayout() {
           name="cards" 
           options={{ 
             title: 'Kartlarım', 
+            href: null,
             tabBarIcon: ({ color }) => <Ionicons name="card" size={26} color={color} />,
-            tabBarLabelStyle: {
-              fontSize: 12,
-              fontWeight: '700',
-              marginTop: 4
-            }
           }} 
         />
         <Tabs.Screen 

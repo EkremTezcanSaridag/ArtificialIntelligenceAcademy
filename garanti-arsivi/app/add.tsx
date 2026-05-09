@@ -6,7 +6,8 @@ import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { uploadInvoice, addManualRecord } from '../src/services/api';
-import { registerForPushNotificationsAsync, scheduleWarrantyNotification } from '../src/services/notifications';
+import { registerForPushNotificationsAsync, scheduleReminderNotification } from '../src/services/notifications';
+import type { ReminderOption } from '../src/services/notifications';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../src/context/ThemeContext';
@@ -36,7 +37,7 @@ const DOC_TYPES: DocTypeConfig[] = [
     titleLabel: 'Ürün Adı / Marka', amountLabel: 'Fatura Tutarı (TL)', dateLabel: 'Satın Alma Tarihi'
   },
   {
-    id: 'invoice', label: 'Fatura', icon: 'receipt', colors: ['#0ea5e9', '#0284c7'], color: '#0ea5e9', categories: ['Elektrik', 'Su', 'Doğalgaz', 'İnternet', 'Diğer'], description: 'Fatura & gider belgesi',
+    id: 'invoice', label: 'Fatura', icon: 'receipt', colors: ['#0ea5e9', '#0284c7'], color: '#0ea5e9', categories: ['Elektrik', 'Su', 'Doğal Gaz', 'İnternet', 'Diğer'], description: 'Fatura & gider belgesi',
     titleLabel: 'Kurum Adı', amountLabel: 'Fatura Tutarı (TL)', dateLabel: 'Son Ödeme Tarihi'
   },
   {
@@ -71,8 +72,7 @@ export default function AddScreen() {
   const [result, setResult] = useState<string | null>(null);
   const [selectedDocType, setSelectedDocType] = useState<DocTypeConfig>(initialConfig);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialConfig.categories?.[0] || 'Diğer');
-  const [warrantyYears, setWarrantyYears] = useState<number>(2);
-  const [notifyBefore, setNotifyBefore] = useState<'1_week' | '1_month' | 'both' | 'none'>('1_week');
+  const [selectedReminders, setSelectedReminders] = useState<ReminderOption[]>([]);
   const { isDark } = useTheme();
 
   const [title, setTitle] = useState('');
@@ -87,9 +87,17 @@ export default function AddScreen() {
 
   const onChangeDate = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') setShowDatePicker(false);
-    if (selectedDate) setDate(selectedDate);
+    if (selectedDate) {
+      setDate(selectedDate);
+      setFormattedDate(
+        `${selectedDate.getDate().toString().padStart(2, '0')}.${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}.${selectedDate.getFullYear()}`
+      );
+    }
   };
-  const formattedDate = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+  const [formattedDate, setFormattedDate] = useState(() => {
+    const d = new Date();
+    return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1).toString().padStart(2, '0')}.${d.getFullYear()}`;
+  });
 
   const getDynamicTitleLabel = () => {
     if (selectedDocType.id === 'kredi') {
@@ -159,22 +167,38 @@ export default function AddScreen() {
          if (interestRate) additionalText += `\nFaiz Oranı: %${interestRate}`;
       }
 
+      // Hatırlatma tercihlerini kaydet
+      if (selectedReminders.length > 0) {
+        additionalText += `\nHatırlatma: ${selectedReminders.join(',')}`;
+      }
+
       if (image) {
         const filename = title ? `${title}` : (image.split('/').pop() || 'belge.jpg');
         const response = await uploadInvoice(image, filename, 'image/jpeg', selectedCategory, selectedDocType.id, additionalText);
         setResult(response.data.text);
         
-        if (selectedDocType.id === 'warranty' && notifyBefore !== 'none' && Platform.OS !== 'web') {
+        // Tüm belge türleri için bildirim zamanla
+        if (selectedReminders.length > 0 && Platform.OS !== 'web') {
            try {
              await registerForPushNotificationsAsync();
-             const expirationDate = new Date(date);
-             expirationDate.setFullYear(expirationDate.getFullYear() + warrantyYears);
-             await scheduleWarrantyNotification(filename, expirationDate, notifyBefore);
+             const [day, month, year] = formattedDate.split('.').map(Number);
+             const targetDate = new Date(year, month - 1, day);
+             await scheduleReminderNotification(filename, targetDate, selectedReminders, selectedDocType.label);
            } catch (e) {}
         }
         Alert.alert('Başarılı', 'Belge AI ile okundu ve kaydedildi!', [{ text: 'Tamam', onPress: () => router.push('/') }]);
       } else {
         await addManualRecord(title, amount, formattedDate, selectedCategory, selectedDocType.id, additionalText);
+        
+        // Tüm belge türleri için bildirim zamanla
+        if (selectedReminders.length > 0 && Platform.OS !== 'web') {
+           try {
+             await registerForPushNotificationsAsync();
+             const [day, month, year] = formattedDate.split('.').map(Number);
+             const targetDate = new Date(year, month - 1, day);
+             await scheduleReminderNotification(title, targetDate, selectedReminders, selectedDocType.label);
+           } catch (e) {}
+        }
         Alert.alert('Başarılı', 'Kayıt başarıyla eklendi!', [{ text: 'Tamam', onPress: () => router.push('/') }]);
       }
     } catch (error: any) {
@@ -270,24 +294,39 @@ export default function AddScreen() {
           </View>
 
           <Text style={styles.inputLabel}>{getDynamicDateLabel()}</Text>
-          <Pressable 
-            onPress={() => setShowDatePicker(true)}
-            style={[styles.inputWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
-          >
-            <Ionicons name="calendar-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} style={styles.inputIcon} />
-            <Text style={[styles.input, { color: isDark ? '#ffffff' : '#000000', lineHeight: 54 }]}>
-              {formattedDate}
-            </Text>
-          </Pressable>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onChangeDate}
-              themeVariant={isDark ? "dark" : "light"}
-            />
+          {Platform.OS === 'web' ? (
+            <View style={[styles.inputWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+              <Ionicons name="calendar-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: isDark ? '#ffffff' : '#000000' }]}
+                placeholder="GG.AA.YYYY"
+                placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
+                value={formattedDate}
+                onChangeText={setFormattedDate}
+                keyboardType="numeric"
+              />
+            </View>
+          ) : (
+            <>
+              <Pressable
+                onPress={() => setShowDatePicker(true)}
+                style={[styles.inputWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
+              >
+                <Ionicons name="calendar-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} style={styles.inputIcon} />
+                <Text style={[styles.input, { color: isDark ? '#ffffff' : '#000000', lineHeight: 54 }]}>
+                  {formattedDate}
+                </Text>
+              </Pressable>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onChangeDate}
+                  themeVariant={isDark ? "dark" : "light"}
+                />
+              )}
+            </>
           )}
 
           {isDetailedCredit && (
@@ -355,67 +394,55 @@ export default function AddScreen() {
             </>
           )}
 
-          {/* Garanti süre & bildirim (sadece garanti belgeleri) */}
-          {selectedDocType.id === 'warranty' && (
-            <>
-              <Text style={styles.sectionTitle}>Garanti Süresi</Text>
-              <View style={styles.categoryContainer}>
-                {[1, 2, 3].map(year => {
-                  const isActive = warrantyYears === year;
-                  return (
-                    <Pressable key={year} onPress={() => setWarrantyYears(year)} style={({pressed}) => [{ transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
-                      {isActive ? (
-                        <LinearGradient
-                          colors={selectedDocType.colors}
-                          style={[styles.categoryBadgeActive, { shadowColor: selectedDocType.color }]}
-                          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                        >
-                          <Text style={styles.categoryTextActive}>{year} Yıl</Text>
-                        </LinearGradient>
-                      ) : (
-                        <BlurView intensity={isDark ? 20 : 40} tint={isDark ? "dark" : "light"} style={styles.categoryBadgeInactiveBlur}>
-                          <View style={[styles.categoryBadgeInactiveInner, { borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
-                            <Text style={[styles.categoryTextInactive, { color: isDark ? '#a1a1aa' : '#52525b' }]}>{year} Yıl</Text>
-                          </View>
-                        </BlurView>
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <Text style={styles.sectionTitle}>Bildirim Tercihi</Text>
-              <View style={styles.categoryContainer}>
-                {[
-                  { id: '1_week', label: '1 Hafta Kala' },
-                  { id: '1_month', label: '1 Ay Kala' },
-                  { id: 'both', label: 'İkisi de' },
-                  { id: 'none', label: 'İstemiyorum' }
-                ].map(opt => {
-                  const isActive = notifyBefore === opt.id;
-                  return (
-                    <Pressable key={opt.id} onPress={() => setNotifyBefore(opt.id as any)} style={({pressed}) => [{ transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
-                      {isActive ? (
-                        <LinearGradient
-                          colors={selectedDocType.colors}
-                          style={[styles.categoryBadgeActive, { shadowColor: selectedDocType.color }]}
-                          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                        >
-                          <Text style={styles.categoryTextActive}>{opt.label}</Text>
-                        </LinearGradient>
-                      ) : (
-                        <BlurView intensity={isDark ? 20 : 40} tint={isDark ? "dark" : "light"} style={styles.categoryBadgeInactiveBlur}>
-                          <View style={[styles.categoryBadgeInactiveInner, { borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
-                            <Text style={[styles.categoryTextInactive, { color: isDark ? '#a1a1aa' : '#52525b' }]}>{opt.label}</Text>
-                          </View>
-                        </BlurView>
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </>
-          )}
+          {/* Hatırlatma Tercihi (Tüm belge türleri) */}
+          <Text style={styles.sectionTitle}>Hatırlatma Tercihi 🔔</Text>
+          <Text style={{ color: isDark ? '#71717a' : '#a1a1aa', fontSize: 13, fontWeight: '500', marginBottom: 14, marginTop: -8 }}>
+            Son tarihe ne kadar kala hatırlatma bildirimi gönderilsin?
+          </Text>
+          <View style={styles.categoryContainer}>
+            {[
+              { id: '1_week' as ReminderOption, label: '1 Hafta Kala' },
+              { id: '2_weeks' as ReminderOption, label: '2 Hafta Kala' },
+              { id: '3_weeks' as ReminderOption, label: '3 Hafta Kala' },
+              { id: '1_month' as ReminderOption, label: '1 Ay Kala' },
+              { id: '2_months' as ReminderOption, label: '2 Ay Kala' },
+              { id: '3_months' as ReminderOption, label: '3 Ay Kala' },
+            ].map(opt => {
+              const isActive = selectedReminders.includes(opt.id);
+              return (
+                <Pressable
+                  key={opt.id}
+                  onPress={() => {
+                    setSelectedReminders(prev =>
+                      prev.includes(opt.id)
+                        ? prev.filter(r => r !== opt.id)
+                        : [...prev, opt.id]
+                    );
+                  }}
+                  style={({pressed}) => [{ transform: [{ scale: pressed ? 0.95 : 1 }] }]}
+                >
+                  {isActive ? (
+                    <LinearGradient
+                      colors={selectedDocType.colors}
+                      style={[styles.categoryBadgeActive, { shadowColor: selectedDocType.color }]}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                        <Text style={styles.categoryTextActive}>{opt.label}</Text>
+                      </View>
+                    </LinearGradient>
+                  ) : (
+                    <BlurView intensity={isDark ? 20 : 40} tint={isDark ? "dark" : "light"} style={styles.categoryBadgeInactiveBlur}>
+                      <View style={[styles.categoryBadgeInactiveInner, { borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
+                        <Text style={[styles.categoryTextInactive, { color: isDark ? '#a1a1aa' : '#52525b' }]}>{opt.label}</Text>
+                      </View>
+                    </BlurView>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
 
           {/* Belge Fotoğrafı Ekleme */}
           <Text style={styles.sectionTitle}>Belge Fotoğrafı (İsteğe Bağlı)</Text>
