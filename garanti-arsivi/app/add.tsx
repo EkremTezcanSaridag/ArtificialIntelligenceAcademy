@@ -215,7 +215,7 @@ export default function AddScreen() {
     setAmount('');
   };
 
-  const bg = isDark ? ['#050505' as const, '#0a0a1a' as const] : ['#f8fafc' as const, '#f1f5f9' as const];
+  const bg: [string, string] = isDark ? ['#050505', '#0a0a1a'] : ['#f8fafc', '#f1f5f9'];
 
   return (
     <LinearGradient colors={bg} style={{ flex: 1 }}>
