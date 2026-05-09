@@ -19,18 +19,19 @@ type TabType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi';
 interface TabConfig {
   id: TabType;
   label: string;
+  shortLabel: string;
   icon: string;
   color: string;
   colors: [string, string];
 }
 
 const TABS: TabConfig[] = [
-  { id: 'warranty',  label: 'Garantiler',     icon: 'shield-checkmark', color: '#6366f1', colors: ['#6366f1', '#4338ca'] },
-  { id: 'invoice',   label: 'Faturalar',      icon: 'receipt',          color: '#0ea5e9', colors: ['#0ea5e9', '#0284c7'] },
-  { id: 'mtv',       label: 'MTV',            icon: 'car-sport',        color: '#f59e0b', colors: ['#f59e0b', '#d97706'] },
-  { id: 'konut',     label: 'Konut Vergisi',  icon: 'home',             color: '#10b981', colors: ['#10b981', '#059669'] },
-  { id: 'kontrat',   label: 'Kontratlar',     icon: 'document-text',    color: '#8b5cf6', colors: ['#8b5cf6', '#7c3aed'] },
-  { id: 'kredi',     label: 'Borçlarım',      icon: 'wallet',           color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
+  { id: 'warranty',  label: 'Garanti Belgelerim', shortLabel: 'garanti belgesi',  icon: 'shield-checkmark', color: '#6366f1', colors: ['#6366f1', '#4338ca'] },
+  { id: 'invoice',   label: 'Faturalar',          shortLabel: 'fatura',           icon: 'receipt',          color: '#0ea5e9', colors: ['#0ea5e9', '#0284c7'] },
+  { id: 'mtv',       label: 'MTV',                shortLabel: 'MTV',              icon: 'car-sport',        color: '#f59e0b', colors: ['#f59e0b', '#d97706'] },
+  { id: 'konut',     label: 'Konut Vergisi',      shortLabel: 'konut vergisi',    icon: 'home',             color: '#10b981', colors: ['#10b981', '#059669'] },
+  { id: 'kontrat',   label: 'Kontratlarım',       shortLabel: 'kontrat',          icon: 'document-text',    color: '#8b5cf6', colors: ['#8b5cf6', '#7c3aed'] },
+  { id: 'kredi',     label: 'Borçlarım',          shortLabel: 'borç',             icon: 'wallet',           color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
 ];
 
 export default function HomeScreen() {
@@ -41,7 +42,7 @@ export default function HomeScreen() {
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<any[] | null>(null);
   const [currentPlanTitle, setCurrentPlanTitle] = useState('');
-  const { isDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
@@ -253,8 +254,23 @@ export default function HomeScreen() {
 
       <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <View style={styles.pageHeader}>
-          <Text style={[styles.pageTitle, { color: isDark ? '#ffffff' : '#09090b' }]}>Dijital Arşiv</Text>
-          <Text style={styles.pageDescription}>Belgeleriniz yapay zeka güvencesiyle saklanıyor.</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.pageTitle, { color: isDark ? '#ffffff' : '#09090b' }]}>Dijital Arşiv</Text>
+              <Text style={styles.pageDescription}>Belgeleriniz yapay zeka güvencesiyle saklanıyor.</Text>
+            </View>
+            <Pressable onPress={toggleTheme} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}>
+              <View style={{
+                width: 44, height: 44, borderRadius: 14,
+                backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(99,102,241,0.12)',
+                justifyContent: 'center', alignItems: 'center',
+                borderWidth: 1,
+                borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(99,102,241,0.2)',
+              }}>
+                <Ionicons name={isDark ? 'sunny' : 'moon'} size={22} color={isDark ? '#f4f4f5' : '#6366f1'} />
+              </View>
+            </Pressable>
+          </View>
         </View>
       </Animated.View>
 
@@ -314,7 +330,7 @@ export default function HomeScreen() {
               {activeTabConfig.label} Boş
             </Text>
             <Text style={styles.emptyText}>
-              Henüz bir {activeTabConfig.label.toLowerCase()} kaydı bulunmuyor.{'\n'}Hemen sağ alttaki butondan ekleyin.
+              Henüz bir {activeTabConfig.shortLabel} kaydı bulunmuyor.
             </Text>
           </Animated.View>
         }
@@ -370,9 +386,9 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   ambientLight: { position: 'absolute', top: -100, right: -100, width: 300, height: 300, borderRadius: 150, blurRadius: 50 },
-  pageHeader: { paddingHorizontal: 24, paddingTop: 40, paddingBottom: 16, zIndex: 10 },
-  pageTitle: { fontSize: 36, fontWeight: '900', marginBottom: 8, letterSpacing: -1 },
-  pageDescription: { color: '#a1a1aa', fontSize: 16, fontWeight: '500', lineHeight: 24 },
+  pageHeader: { paddingHorizontal: 24, paddingTop: Platform.OS === 'ios' ? 60 : 50, paddingBottom: 20, zIndex: 10 },
+  pageTitle: { fontSize: 42, fontWeight: '900', marginBottom: 6, letterSpacing: -1.5, textAlign: 'left' },
+  pageDescription: { color: '#a1a1aa', fontSize: 15, fontWeight: '500', lineHeight: 22, textAlign: 'left' },
   tabWrapper: { paddingHorizontal: 24, zIndex: 10, marginBottom: 16 },
   tabGridContent: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tabPill: { borderRadius: 24, overflow: 'hidden' },

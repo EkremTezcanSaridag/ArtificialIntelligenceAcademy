@@ -179,11 +179,11 @@ export default function CardsScreen() {
           
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 12 }}>
             <View>
-              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '800', textTransform: 'uppercase', marginBottom: 4 }}>Kart Limiti</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '800', marginBottom: 4 }}>KART LİMİTİ</Text>
               <Text style={{ color: 'white', fontSize: 18, fontWeight: '800' }}>{tutarMatch ? tutarMatch[1] : '0'} TL</Text>
             </View>
             <View>
-              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '800', textTransform: 'uppercase', marginBottom: 4 }}>Toplam Borç</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '800', marginBottom: 4 }}>TOPLAM BORÇ</Text>
               <Text style={{ color: '#fbcfe8', fontSize: 18, fontWeight: '800' }}>{totalDebt} TL</Text>
             </View>
           </View>

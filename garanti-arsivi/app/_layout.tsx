@@ -14,9 +14,8 @@ function TabLayout() {
       <Tabs
         screenOptions={{
           headerStyle: {
-            backgroundColor: isDark ? '#09090b' : '#ffffff',
-            borderBottomWidth: 1,
-            borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+            backgroundColor: 'transparent',
+            borderBottomWidth: 0,
             elevation: 0,
             shadowOpacity: 0
           },
@@ -53,8 +52,8 @@ function TabLayout() {
         <Tabs.Screen 
           name="index" 
           options={{ 
-            headerTitle: '',
-            title: 'Garanti Arşivi', 
+            headerShown: false,
+            title: 'Dijital Arşiv', 
             tabBarIcon: ({ color }) => <Ionicons name="shield-checkmark" size={26} color={color} />,
             tabBarLabelStyle: {
               fontSize: 12,
