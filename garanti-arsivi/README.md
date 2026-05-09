@@ -1,50 +1,108 @@
-# Welcome to your Expo app 👋
+# Dijital Arşiv 📂
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Dijital Arşiv**, belgelerinizi yapay zeka destekli OCR teknolojisiyle tarayıp dijital ortamda güvenle saklayan, hatırlatma bildirimleriyle son tarihleri asla kaçırmamanızı sağlayan kapsamlı bir mobil uygulamadır.
 
-## Get started
+## ✨ Özellikler
 
-1. Install dependencies
+### 📋 Belge Yönetimi
+- **Garanti Belgelerim** — Ürün garanti belgelerini saklayın, kategori ve süre bilgisiyle takip edin
+- **Faturalar** — Elektrik, su, doğal gaz, internet faturalarınızı arşivleyin
+- **MTV (Motorlu Taşıt Vergisi)** — Araç vergilerinizi kayıt altına alın
+- **Konut Vergisi** — Emlak vergisi, DASK, tapu harcı belgelerinizi yönetin
+- **Kontratlarım** — Kira sözleşmeleri, iş sözleşmeleri ve kontratları saklayın
+- **Borçlarım** — Kredi, KYK, elden borç ve taksit takibi yapın (ödeme planı görüntüleme dahil)
+- **Kartlarım** — Kredi kartı, banka kartı, sanal kart ve yemek kartlarınızı yönetin
 
-   ```bash
-   npm install
-   ```
+### 🤖 Yapay Zeka ile OCR
+- Fotoğraf çekerek veya galeriden seçerek belgeleri otomatik taratma
+- OCR ile metin çıkarma ve yapılandırılmış veri oluşturma
+- FastAPI + Pytesseract tabanlı backend
 
-2. Start the app
+### 🔔 Akıllı Hatırlatma Sistemi
+Tüm belge türleri için son tarihlere yaklaşırken bildirim alma:
+- **1 Hafta Kala** — Son tarihten 7 gün önce
+- **2 Hafta Kala** — Son tarihten 14 gün önce
+- **3 Hafta Kala** — Son tarihten 21 gün önce
+- **1 Ay Kala** — Son tarihten 30 gün önce
+- **2 Ay Kala** — Son tarihten 60 gün önce
+- **3 Ay Kala** — Son tarihten 90 gün önce
 
-   ```bash
-   npx expo start
-   ```
+> Birden fazla hatırlatma seçeneği aynı anda seçilebilir (çoklu seçim).
 
-In the output, you'll find options to open the app in a
+### 🌗 Karanlık / Aydınlık Mod
+- Tek tuşla tema değişimi (sağ üst köşedeki ay/güneş ikonu)
+- Tüm sayfalarda tutarlı tema desteği
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 💳 Kart Yönetimi
+- Harcama ekleme ve geçmişi görüntüleme
+- Kart limiti ve toplam borç takibi
+- Son kullanma tarihi bildirimleri
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### 📊 Borç & Taksit Takibi
+- Detaylı kredi bilgileri (vade, faiz oranı)
+- Otomatik ödeme planı oluşturma
+- Taksit bazlı takip modalı
 
-## Get a fresh project
+## 🛠️ Teknoloji Yığını
 
-When you're ready, run:
+| Katman | Teknoloji |
+|--------|-----------|
+| **Frontend** | React Native + Expo |
+| **Navigasyon** | Expo Router (file-based routing) |
+| **UI** | expo-linear-gradient, expo-blur, Ionicons |
+| **Backend** | FastAPI + Pytesseract (OCR) |
+| **Veritabanı** | Supabase |
+| **Bildirimler** | expo-notifications |
+| **State** | React useState + Context API (tema) |
+
+## 🚀 Kurulum
+
+### 1. Bağımlılıkları Yükleyin
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Backend'i Başlatın
 
-## Learn more
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+### 3. Uygulamayı Başlatın
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npx expo start
+```
 
-## Join the community
+Expo Go uygulaması ile QR kodu tarayarak mobil cihazınızda test edebilirsiniz.
 
-Join our community of developers creating universal apps.
+## 📁 Proje Yapısı
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```
+garanti-arsivi/
+├── app/
+│   ├── _layout.tsx        # Tab navigasyonu & tema ayarları
+│   ├── index.tsx          # Ana sayfa (tüm sekmeler & belgeler)
+│   ├── add.tsx            # Yeni kayıt ekleme (OCR & manuel)
+│   └── cards.tsx          # Kart yönetim sayfası
+├── src/
+│   ├── context/
+│   │   └── ThemeContext.tsx  # Karanlık/aydınlık tema yönetimi
+│   └── services/
+│       ├── api.ts           # Supabase API servisleri
+│       └── notifications.ts # Bildirim zamanlama sistemi
+├── backend/
+│   └── main.py            # FastAPI + OCR backend
+└── assets/                # Uygulama ikonları ve görselleri
+```
+
+## 👥 Katkıda Bulunanlar
+
+Bu proje **Artificial Intelligence Academy** kapsamında geliştirilmektedir.
+
+## 📄 Lisans
+
+Bu proje eğitim amaçlı geliştirilmiştir.
