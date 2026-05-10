@@ -123,9 +123,10 @@ export async function scheduleWarrantyNotification(
   }
 }
 
-export type ReminderOption = '1_week' | '2_weeks' | '3_weeks' | '1_month' | '2_months' | '3_months';
+export type ReminderOption = '1_minute' | '1_week' | '2_weeks' | '3_weeks' | '1_month' | '2_months' | '3_months';
 
 const REMINDER_DAYS: Record<ReminderOption, number> = {
+  '1_minute': 0, // daysBefore = 0, but we will handle it specially
   '1_week': 7,
   '2_weeks': 14,
   '3_weeks': 21,
@@ -135,6 +136,7 @@ const REMINDER_DAYS: Record<ReminderOption, number> = {
 };
 
 const REMINDER_LABELS: Record<ReminderOption, string> = {
+  '1_minute': '1 dakika',
   '1_week': '1 hafta',
   '2_weeks': '2 hafta',
   '3_weeks': '3 hafta',
@@ -159,7 +161,13 @@ export async function scheduleReminderNotification(
       const daysBefore = REMINDER_DAYS[reminder];
       const label = REMINDER_LABELS[reminder];
       const triggerDate = new Date(targetDate);
-      triggerDate.setDate(triggerDate.getDate() - daysBefore);
+      
+      if (reminder === '1_minute') {
+        // Test amaçlı: Şu andan tam 1 dakika sonraya kur
+        triggerDate.setTime(Date.now() + 60 * 1000);
+      } else {
+        triggerDate.setDate(triggerDate.getDate() - daysBefore);
+      }
 
       if (triggerDate.getTime() > Date.now()) {
         await Notifications.scheduleNotificationAsync({
@@ -178,5 +186,34 @@ export async function scheduleReminderNotification(
     }
   } catch (error) {
     console.error('Reminder notification scheduling error:', error);
+  }
+}
+
+export async function sendTestNotification() {
+  if (isExpoGo && Platform.OS === 'android') {
+    // SDK 53 ile birlikte Expo Go Android'de expo-notifications desteği tamamen kaldırıldı.
+    // Bu yüzden Expo Go'da test ederken çökmeyi önlemek için Alert gösteriyoruz.
+    const { Alert } = require('react-native');
+    Alert.alert(
+      "Test Bildirimi 🚀 (Expo Go)", 
+      "Bildirim sisteminiz başarıyla çalışıyor! (Gerçek bildirimler Development Build veya iOS üzerinde görünecektir.)"
+    );
+    console.log("Test bildirimi (Alert) gösterildi.");
+    return;
+  }
+
+  try {
+    const Notifications = require('expo-notifications');
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Test Bildirimi 🚀",
+        body: "Bildirim sisteminiz başarıyla çalışıyor!",
+        data: { test: true },
+      },
+      trigger: null, // Send immediately
+    });
+    console.log("Test bildirimi gönderildi.");
+  } catch (error) {
+    console.error("Test bildirimi hatası:", error);
   }
 }

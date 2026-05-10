@@ -55,11 +55,7 @@ const DOC_TYPES: DocTypeConfig[] = [
   {
     id: 'kredi', label: 'Borçlarım', icon: 'wallet', colors: ['#ef4444', '#dc2626'], color: '#ef4444', categories: ['Konut Kredisi', 'Taşıt Kredisi', 'İhtiyaç Kredisi', 'KYK Kredisi', 'Elden Borç', 'Diğer'], description: 'Kredi & borç belgesi',
     titleLabel: 'Banka / Kurum Adı', amountLabel: 'Tutar (TL)', dateLabel: 'Son Ödeme Tarihi'
-  },
-  {
-    id: 'kart', label: 'Kartlarım', icon: 'card', colors: ['#ec4899', '#be185d'], color: '#ec4899', categories: ['Kredi Kartı', 'Banka Kartı', 'Sanal Kart', 'Yemek Kartı', 'Diğer'], description: 'Fiziksel ve dijital kartlar',
-    titleLabel: 'Banka / Kart Adı', amountLabel: 'Kart Limiti / Bakiye (TL)', dateLabel: 'Son Kullanma Tarihi'
-  },
+  }
 ];
 
 export default function AddScreen() {
@@ -112,7 +108,6 @@ export default function AddScreen() {
       if (selectedCategory === 'İş Sözleşmesi') return 'Firma / Şirket Adı';
       return 'Taraf / Kişi Adı';
     }
-    if (selectedDocType.id === 'kart') return 'Banka veya Kart Adı';
     return selectedDocType.titleLabel;
   };
 
@@ -127,7 +122,6 @@ export default function AddScreen() {
       if (selectedCategory === 'İş Sözleşmesi') return 'Maaş / Ücret (TL)';
       return 'Aylık Bedel (TL)';
     }
-    if (selectedDocType.id === 'kart') return 'Kart Limiti (TL)';
     return selectedDocType.amountLabel;
   };
 
@@ -137,7 +131,6 @@ export default function AddScreen() {
       if (selectedCategory === 'Kredi Kartı') return 'Son Ödeme Tarihi';
       return 'Taksit Ödeme Günü';
     }
-    if (selectedDocType.id === 'kart') return 'Son Kullanma Tarihi';
     return selectedDocType.dateLabel;
   };
 
@@ -172,6 +165,35 @@ export default function AddScreen() {
         additionalText += `\nHatırlatma: ${selectedReminders.join(',')}`;
       }
 
+      const triggerCalendarPrompt = (docTitle: string, docTypeLabel: string) => {
+        Alert.alert(
+          'Başarılı',
+          'Belge kaydedildi! Bu belgeyi telefonunuzun takvimine hatırlatıcı olarak eklemek ister misiniz?',
+          [
+            { text: 'Hayır', style: 'cancel', onPress: () => router.push('/') },
+            { 
+              text: 'Takvime Ekle', 
+              style: 'default',
+              onPress: () => {
+                const encTitle = encodeURIComponent(`${docTitle} - Hatırlatma`);
+                const encDetails = encodeURIComponent(`Garanti Arşivi: ${docTypeLabel}`);
+                const [day, month, year] = formattedDate.split('.').map(Number);
+                const tDate = new Date(year, month - 1, day);
+                const formatGDate = (d: Date) => d.toISOString().replace(/-|:|\.\d\d\d/g,"").split('T')[0];
+                const dateStr = formatGDate(tDate);
+                const nextDayStr = formatGDate(new Date(tDate.getTime() + 24*60*60*1000));
+                const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encTitle}&details=${encDetails}&dates=${dateStr}/${nextDayStr}`;
+                import('react-native').then(({ Linking }) => {
+                  Linking.openURL(gCalUrl).catch(() => {}).finally(() => {
+                    router.push('/');
+                  });
+                });
+              }
+            }
+          ]
+        );
+      };
+
       if (image) {
         const filename = title ? `${title}` : (image.split('/').pop() || 'belge.jpg');
         const response = await uploadInvoice(image, filename, 'image/jpeg', selectedCategory, selectedDocType.id, additionalText);
@@ -186,7 +208,7 @@ export default function AddScreen() {
              await scheduleReminderNotification(filename, targetDate, selectedReminders, selectedDocType.label);
            } catch (e) {}
         }
-        Alert.alert('Başarılı', 'Belge AI ile okundu ve kaydedildi!', [{ text: 'Tamam', onPress: () => router.push('/') }]);
+        triggerCalendarPrompt(filename, selectedDocType.label);
       } else {
         await addManualRecord(title, amount, formattedDate, selectedCategory, selectedDocType.id, additionalText);
         
@@ -199,7 +221,7 @@ export default function AddScreen() {
              await scheduleReminderNotification(title, targetDate, selectedReminders, selectedDocType.label);
            } catch (e) {}
         }
-        Alert.alert('Başarılı', 'Kayıt başarıyla eklendi!', [{ text: 'Tamam', onPress: () => router.push('/') }]);
+        triggerCalendarPrompt(title, selectedDocType.label);
       }
     } catch (error: any) {
       Alert.alert('İşlem Başarısız', error.message || 'Bir hata oluştu.');
@@ -401,6 +423,7 @@ export default function AddScreen() {
           </Text>
           <View style={styles.categoryContainer}>
             {[
+              { id: '1_minute' as ReminderOption, label: 'Şimdi Test Et (1 Dk)' },
               { id: '1_week' as ReminderOption, label: '1 Hafta Kala' },
               { id: '2_weeks' as ReminderOption, label: '2 Hafta Kala' },
               { id: '3_weeks' as ReminderOption, label: '3 Hafta Kala' },
