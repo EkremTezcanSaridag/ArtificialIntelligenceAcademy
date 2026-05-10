@@ -1,62 +1,112 @@
-# Garanti Arşivi
+# Dijital Arşiv 📂
 
-Kullanıcıların aldıkları ürünlerin faturalarını fotoğraflayıp saklayabilecekleri, kategori bazlı garanti sürelerini takip edebilecekleri ve OCR ile faturadan otomatik veri çekebilecekleri modern bir arşiv uygulaması.
+**Dijital Arşiv**, belgelerinizi yapay zeka destekli OCR teknolojisiyle tarayıp dijital ortamda güvenle saklayan, hatırlatma bildirimleriyle son tarihleri asla kaçırmamanızı sağlayan kapsamlı bir mobil uygulamadır.
 
-## 🚀 Özellikler
-- 📱 Modern ve şık arayüz (Karanlık tema, kategori filtreleri, ikonlar).
-- 📸 Navigasyon çubuğu ile kolay erişilebilir Kamera ve Galeri entegrasyonu.
-- 🔍 PyTesseract ile fatura üzerinden otomatik metin okuma (OCR).
-- 🌐 Hızlı ve asenkron FastAPI arka plan servisi.
+## ✨ Özellikler
 
-## 📂 Klasör Yapısı
-Proje iki ana dizine ayrılmıştır:
-1. `backend/`: FastAPI (Python) tabanlı OCR servisinin ve veritabanı kayıt işlemlerinin bulunduğu klasör.
-2. `garanti-arsivi/`: React Native (Expo) tabanlı, hem mobilde (Android/iOS) hem de web'de çalışan görsel arayüzün (Frontend) bulunduğu klasör.
+### 📋 Belge Yönetimi
+- **Garanti Belgelerim** — Ürün garanti belgelerini saklayın, kategori ve süre bilgisiyle takip edin
+- **Faturalar** — Elektrik, su, doğal gaz, internet faturalarınızı arşivleyin
+- **MTV (Motorlu Taşıt Vergisi)** — Araç vergilerinizi kayıt altına alın
+- **Konut Vergisi** — Emlak vergisi, DASK, tapu harcı belgelerinizi yönetin
+- **Kontratlarım** — Kira sözleşmeleri, iş sözleşmeleri ve kontratları saklayın
+- **Borçlarım** — Kredi, KYK, elden borç ve taksit takibi yapın (ödeme planı görüntüleme dahil)
+- **Kartlarım** — Kredi kartı, banka kartı, sanal kart ve yemek kartlarınızı yönetin
 
----
+### 🤖 Yapay Zeka ile OCR
+- Fotoğraf çekerek veya galeriden seçerek belgeleri otomatik taratma
+- OCR ile metin çıkarma ve yapılandırılmış veri oluşturma
+- FastAPI + Pytesseract tabanlı backend
 
-## 🛠️ Kurulum ve Çalıştırma
+### 🔔 Akıllı Hatırlatma Sistemi
+Tüm belge türleri için son tarihlere yaklaşırken bildirim alma:
+- **1 Hafta Kala** — Son tarihten 7 gün önce
+- **2 Hafta Kala** — Son tarihten 14 gün önce
+- **3 Hafta Kala** — Son tarihten 21 gün önce
+- **1 Ay Kala** — Son tarihten 30 gün önce
+- **2 Ay Kala** — Son tarihten 60 gün önce
+- **3 Ay Kala** — Son tarihten 90 gün önce
 
-Uygulamanın çalışması için **iki terminal** kullanmanız gerekmektedir (Biri sunucu, diğeri arayüz için).
+> Birden fazla hatırlatma seçeneği aynı anda seçilebilir (çoklu seçim).
 
-### 1. Adım: Backend'i Başlatmak (Terminal 1)
+### 🌗 Karanlık / Aydınlık Mod
+- Tek tuşla tema değişimi (sağ üst köşedeki ay/güneş ikonu)
+- Tüm sayfalarda tutarlı tema desteği
 
-Önkoşul: Bilgisayarınızda Python ve **Tesseract-OCR** uygulamasının kurulu olduğundan emin olun.
+### 💳 Kart Yönetimi
+- Harcama ekleme ve geçmişi görüntüleme
+- Kart limiti ve toplam borç takibi
+- Son kullanma tarihi bildirimleri
+
+### 📊 Borç & Taksit Takibi
+- Detaylı kredi bilgileri (vade, faiz oranı)
+- Otomatik ödeme planı oluşturma
+- Taksit bazlı takip modalı
+
+## 🛠️ Teknoloji Yığını
+
+| Katman | Teknoloji |
+|--------|-----------|
+| **Frontend** | React Native + Expo |
+| **Navigasyon** | Expo Router (file-based routing) |
+| **UI** | expo-linear-gradient, expo-blur, Ionicons |
+| **Backend** | FastAPI + Pytesseract (OCR) |
+| **Veritabanı** | Supabase |
+| **Bildirimler** | expo-notifications |
+| **State** | React useState + Context API (tema) |
+
+## 🚀 Kurulum
+
+### 1. Bağımlılıkları Yükleyin
 
 ```bash
-# 1. Proje ana dizininden backend klasörüne girin:
-cd backend
-
-# 2. Sanal ortamı aktif edin ve paketleri kurun (Windows için):
-.\venv\Scripts\python.exe -m pip install -r requirements.txt
-
-# 3. Sunucuyu başlatın:
-.\venv\Scripts\python.exe -m uvicorn main:app --reload
-```
-Bu işlem sonunda FastAPI sunucunuz `http://127.0.0.1:8000` adresinde arka planda çalışmaya başlayacaktır.
-
-### 2. Adım: Frontend'i Başlatmak (Terminal 2)
-
-```bash
-# 1. Proje ana dizininden garanti-arsivi klasörüne girin:
 cd garanti-arsivi
-
-# 2. Bağımlılıkların yüklü olduğundan emin olun:
 npm install
+```
 
-# 3. Uygulamayı çalıştırın (Web üzerinde açmak için):
-npx expo start --web
+### 2. Backend'i Başlatın
 
-# VEYA Mobil cihazda test etmek için:
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+### 3. Uygulamayı Başlatın
+
+```bash
+cd garanti-arsivi
 npx expo start
 ```
-*Not: Sadece `npx expo start` yazarsanız terminalde bir QR kod belirecektir. Telefonunuza **Expo Go** uygulamasını indirip bu QR kodu okutarak uygulamayı doğrudan telefon kameranızla test edebilirsiniz.*
 
----
+Expo Go uygulaması ile QR kodu tarayarak mobil cihazınızda test edebilirsiniz.
 
-## 📌 Kategoriler ve OCR Akışı
-1. Kullanıcı alt bardan (Tab bar) "Kamera / OCR" sekmesine tıklar.
-2. Fotoğraf çekilir veya seçilir.
-3. Ekranda faturanın hangi kategoriye ait olduğu (Örn: Elektronik, Ev Aletleri) seçilir.
-4. "OCR & Sisteme Kaydet" butonuna basıldığında görsel arka planda FastAPI'ye iletilir.
-5. FastAPI görseli okur ve metinleri ön yüze geri yollar, kullanıcıya işlemin başarıyla bittiği mesajı verilir.
+## 📁 Proje Yapısı
+
+```
+ArtificialIntelligenceAcademy/
+├── backend/
+│   └── main.py              # FastAPI + OCR backend
+├── garanti-arsivi/
+│   ├── app/
+│   │   ├── _layout.tsx      # Tab navigasyonu & tema ayarları
+│   │   ├── index.tsx        # Ana sayfa (tüm sekmeler & belgeler)
+│   │   ├── add.tsx          # Yeni kayıt ekleme (OCR & manuel)
+│   │   └── cards.tsx        # Kart yönetim sayfası
+│   ├── src/
+│   │   ├── context/
+│   │   │   └── ThemeContext.tsx  # Karanlık/aydınlık tema yönetimi
+│   │   └── services/
+│   │       ├── api.ts           # Supabase API servisleri
+│   │       └── notifications.ts # Bildirim zamanlama sistemi
+│   └── assets/              # Uygulama ikonları ve görselleri
+└── README.md
+```
+
+## 👥 Katkıda Bulunanlar
+
+Bu proje **Artificial Intelligence Academy** kapsamında geliştirilmektedir.
+
+## 📄 Lisans
+
+Bu proje eğitim amaçlı geliştirilmiştir.
