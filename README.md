@@ -11,7 +11,7 @@
 - **Konut Vergisi** — Emlak vergisi, DASK, tapu harcı belgelerinizi yönetin
 - **Kontratlarım** — Kira sözleşmeleri, iş sözleşmeleri ve kontratları saklayın
 - **Borçlarım** — Kredi, KYK, elden borç ve taksit takibi yapın (ödeme planı görüntüleme dahil)
-- **Kartlarım** — Kredi kartı, banka kartı, sanal kart ve yemek kartlarınızı yönetin
+
 
 ### 🤖 Yapay Zeka ile OCR
 - Fotoğraf çekerek veya galeriden seçerek belgeleri otomatik taratma
@@ -33,10 +33,6 @@ Tüm belge türleri için son tarihlere yaklaşırken bildirim alma:
 - Tek tuşla tema değişimi (sağ üst köşedeki ay/güneş ikonu)
 - Tüm sayfalarda tutarlı tema desteği
 
-### 💳 Kart Yönetimi
-- Harcama ekleme ve geçmişi görüntüleme
-- Kart limiti ve toplam borç takibi
-- Son kullanma tarihi bildirimleri
 
 ### 📊 Borç & Taksit Takibi
 - Detaylı kredi bilgileri (vade, faiz oranı)
@@ -91,8 +87,8 @@ ArtificialIntelligenceAcademy/
 │   ├── app/
 │   │   ├── _layout.tsx      # Tab navigasyonu & tema ayarları
 │   │   ├── index.tsx        # Ana sayfa (tüm sekmeler & belgeler)
-│   │   ├── add.tsx          # Yeni kayıt ekleme (OCR & manuel)
-│   │   └── cards.tsx        # Kart yönetim sayfası
+│   │   └── add.tsx          # Yeni kayıt ekleme (OCR & manuel)
+
 │   ├── src/
 │   │   ├── context/
 │   │   │   └── ThemeContext.tsx  # Karanlık/aydınlık tema yönetimi
