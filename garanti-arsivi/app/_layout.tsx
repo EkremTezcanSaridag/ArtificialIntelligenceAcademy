@@ -62,14 +62,7 @@ function TabLayout() {
             }
           }} 
         />
-        <Tabs.Screen 
-          name="cards" 
-          options={{ 
-            title: 'Kartlarım', 
-            href: null,
-            tabBarIcon: ({ color }) => <Ionicons name="card" size={26} color={color} />,
-          }} 
-        />
+
         <Tabs.Screen 
           name="add" 
           options={{ 

@@ -16,7 +16,7 @@ import { Alert } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-type TabType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'kart';
+type TabType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi';
 
 interface TabConfig {
   id: TabType;
@@ -34,7 +34,6 @@ const TABS: TabConfig[] = [
   { id: 'konut',     label: 'Konut Vergisi',      shortLabel: 'konut vergisi',    icon: 'home',             color: '#10b981', colors: ['#10b981', '#059669'] },
   { id: 'kontrat',   label: 'Kontratlarım',       shortLabel: 'kontrat',          icon: 'document-text',    color: '#8b5cf6', colors: ['#8b5cf6', '#7c3aed'] },
   { id: 'kredi',     label: 'Borçlarım',          shortLabel: 'borç',             icon: 'wallet',           color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
-  { id: 'kart',      label: 'Kartlarım',          shortLabel: 'kart',             icon: 'card',             color: '#ec4899', colors: ['#ec4899', '#be185d'] },
 ];
 
 export default function HomeScreen() {
@@ -213,10 +212,6 @@ export default function HomeScreen() {
     if (item.type === 'konut') return 'Konut Vergisi';
     if (item.type === 'kontrat') return item.category || 'Kontrat';
     if (item.type === 'kredi') return 'Borç Kaydı';
-    if (item.type === 'kart') {
-      const dateMatch = item.raw_text?.match(/Son Kullanma Tarihi:\s*(\d{2}\.\d{2}\.\d{4})/);
-      return dateMatch ? `SKT: ${dateMatch[1]}` : item.category || 'Kart';
-    }
     return item.category || 'Diğer';
   };
 
