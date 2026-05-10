@@ -1,6 +1,9 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Form
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 import pytesseract
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from PIL import Image
 import io
 import httpx
@@ -19,6 +22,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Frontend assets path
+frontend_path = Path(__file__).parent / "frontend"
+app.mount("/static", StaticFiles(directory=frontend_path), name="static")
 
 # Supabase Bilgileri (Çevre değişkenlerinden alınması önerilir)
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://your-project.supabase.co")
@@ -88,9 +95,25 @@ async def upload_invoice(
         print(f"Genel Hata: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Hata: {str(e)}")
 
-@app.get("/")
-def read_root():
-    return {"message": "Garanti Arşivi OCR API Çalışıyor"}
+@app.get("/", response_class=HTMLResponse)
+async def splash(request: Request):
+    ua = request.headers.get('user-agent', '')
+    if 'Mobi' not in ua:
+        return RedirectResponse(url="/home")
+    splash_path = frontend_path / "splash.html"
+    if not splash_path.exists():
+        return HTMLResponse(content="<h1>Splash Page Not Found</h1>", status_code=404)
+    html_content = splash_path.read_text(encoding="utf-8")
+    return HTMLResponse(content=html_content)
+
+# Home page route – serves static home.html
+@app.get("/home", response_class=HTMLResponse)
+async def home_page():
+    home_path = frontend_path / "home.html"
+    if not home_path.exists():
+        return HTMLResponse(content="<h1>Home Page Not Found</h1>", status_code=404)
+    html_content = home_path.read_text(encoding="utf-8")
+    return HTMLResponse(content=html_content)
 
 if __name__ == "__main__":
     import uvicorn

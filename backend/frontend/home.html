@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ana Sayfa – Garanti Arşivi OCR</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --primary: hsl(210, 70%, 55%);
+            --bg-gradient: linear-gradient(135deg, hsl(210, 30%, 15%), hsl(210, 25%, 10%));
+            --text: hsl(0, 0%, 95%);
+        }
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .header {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: var(--primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+        .cta {
+            padding: 0.8rem 1.6rem;
+            background: var(--primary);
+            border-radius: 8px;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        .cta:hover {
+            background: hsl(210, 70%, 45%);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">Garanti Arşivi OCR</div>
+    <p>Hoş geldiniz! Başlamak için bir belge yükleyebilirsiniz.</p>
+    <a class="cta" href="/">Dosya Yükle</a>
+</body>
+</html>

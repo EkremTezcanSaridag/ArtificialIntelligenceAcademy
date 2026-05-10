@@ -2,11 +2,34 @@ import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider as NavThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Pressable, Platform } from 'react-native';
+import { Pressable, Platform } from 'react-native';
 import { ThemeProvider as CustomThemeProvider, useTheme } from '../src/context/ThemeContext';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect, useState } from 'react';
+import CustomSplash from '../components/CustomSplash';
+
+// Native splash hemen kapanmasın
+SplashScreen.preventAutoHideAsync();
 
 function TabLayout() {
   const { isDark, toggleTheme } = useTheme();
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    // Native splash'i hemen kapat, yerini Custom splash alıyor
+    SplashScreen.hideAsync();
+
+    // 2.5 saniye sonra custom splash'i kapat, ana sayfaya geç
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Custom splash ekranını göster
+  if (showSplash) {
+    return <CustomSplash />;
+  }
 
   return (
     <NavThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
