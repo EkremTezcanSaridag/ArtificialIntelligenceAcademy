@@ -76,8 +76,22 @@ function TabLayout() {
           name="index" 
           options={{ 
             headerShown: false,
-            title: 'Dijital Arşiv', 
+            title: 'Arşiv', 
             tabBarIcon: ({ color }) => <Ionicons name="shield-checkmark" size={26} color={color} />,
+            tabBarLabelStyle: {
+              fontSize: 12,
+              fontWeight: '700',
+              marginTop: 4
+            }
+          }} 
+        />
+
+        <Tabs.Screen 
+          name="stats" 
+          options={{ 
+            headerShown: false,
+            title: 'İstatistikler', 
+            tabBarIcon: ({ color }) => <Ionicons name="pie-chart" size={26} color={color} />,
             tabBarLabelStyle: {
               fontSize: 12,
               fontWeight: '700',

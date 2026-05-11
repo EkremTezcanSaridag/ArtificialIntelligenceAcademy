@@ -44,6 +44,7 @@ export default function HomeScreen() {
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<any[] | null>(null);
   const [currentPlanTitle, setCurrentPlanTitle] = useState('');
+  const [currentPlanItem, setCurrentPlanItem] = useState<any | null>(null);
   const [detailItem, setDetailItem] = useState<any>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -335,6 +336,7 @@ export default function HomeScreen() {
                       if (plan) {
                         setCurrentPlan(plan);
                         setCurrentPlanTitle(item.filename);
+                        setCurrentPlanItem(item);
                         setPlanModalVisible(true);
                       } else {
                         Alert.alert('Hata', 'Ödeme planı oluşturulamadı. Veri eksik.');
@@ -553,6 +555,27 @@ export default function HomeScreen() {
               </Pressable>
             </View>
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+              {/* Kredi Özeti (Ödeme Planı Üstü) */}
+              {currentPlanItem?.type === 'kredi' && currentPlanItem?.raw_text && (
+                <View style={{ backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)', padding: 20, borderRadius: 24, marginBottom: 24, borderWidth: 1, borderColor: '#6366f144' }}>
+                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                      <View>
+                         <Text style={{ color: '#6366f1', fontWeight: '900', fontSize: 10, textTransform: 'uppercase' }}>Anapara</Text>
+                         <Text style={{ color: isDark ? '#fff' : '#000', fontSize: 18, fontWeight: '900' }}>{currentPlanItem.raw_text.match(/Anapara:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                         <Text style={{ color: '#10b981', fontWeight: '900', fontSize: 10, textTransform: 'uppercase' }}>Toplam Geri Ödeme</Text>
+                         <Text style={{ color: isDark ? '#fff' : '#000', fontSize: 18, fontWeight: '900' }}>{currentPlanItem.raw_text.match(/Toplam Geri Ödeme:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
+                      </View>
+                   </View>
+                   <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', marginBottom: 12 }} />
+                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 12, fontWeight: '600' }}>Vade: {currentPlanItem.raw_text.match(/Vade:\s*(\d+)\s*Ay/)?.[1] || '--'} Ay</Text>
+                      <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 12, fontWeight: '600' }}>Faiz: %{currentPlanItem.raw_text.match(/Faiz Oranı:\s*%?([\d.,]+)/)?.[1] || '0,00'}</Text>
+                   </View>
+                </View>
+              )}
+
               {currentPlan?.map((p, index) => (
                 <View key={p.id} style={[styles.planRow, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
                   <View style={styles.planDateCol}>
@@ -670,6 +693,28 @@ export default function HomeScreen() {
                     <Text style={[styles.detailValue, { color: isDark ? '#fff' : '#000' }]}>{formatDate(detailItem?.created_at)}</Text>
                   </View>
                 </View>
+
+                {/* Kredi Detayları (Varsa) */}
+                {detailItem?.type === 'kredi' && detailItem?.raw_text?.includes('Anapara:') && (
+                  <View style={{ backgroundColor: isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)', padding: 16, borderRadius: 20, marginVertical: 8 }}>
+                    <Text style={{ color: '#6366f1', fontWeight: '900', fontSize: 11, textTransform: 'uppercase', marginBottom: 12 }}>Kredi Özeti</Text>
+                    <View style={{ gap: 12 }}>
+                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                          <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 13, fontWeight: '600' }}>Anapara</Text>
+                          <Text style={{ color: isDark ? '#fff' : '#000', fontWeight: '800' }}>{detailItem.raw_text.match(/Anapara:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
+                       </View>
+                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                          <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 13, fontWeight: '600' }}>Aylık Taksit</Text>
+                          <Text style={{ color: '#6366f1', fontWeight: '800' }}>{detailItem.raw_text.match(/Aylık Taksit:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
+                       </View>
+                       <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                          <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 13, fontWeight: '700' }}>Toplam Geri Ödeme</Text>
+                          <Text style={{ color: '#10b981', fontWeight: '900', fontSize: 16 }}>{detailItem.raw_text.match(/Toplam Geri Ödeme:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
+                       </View>
+                    </View>
+                  </View>
+                )}
                 {detailItem?.raw_text && (
                   <View style={{ marginTop: 8 }}>
                     <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Belge Detayları (Yapay Zeka Analizi)</Text>

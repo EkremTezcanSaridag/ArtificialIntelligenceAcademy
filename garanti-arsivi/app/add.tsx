@@ -2,7 +2,7 @@ import {
   View, Text, StyleSheet, Pressable, Image, ActivityIndicator,
   Alert, ScrollView, Dimensions, Platform, TextInput
 } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { uploadInvoice, addManualRecord, analyzeDocument } from '../src/services/api';
@@ -80,8 +80,28 @@ export default function AddScreen() {
   
   const [interestRate, setInterestRate] = useState('');
   const [months, setMonths] = useState('');
+  const [principal, setPrincipal] = useState('');
 
   const isDetailedCredit = selectedDocType.id === 'kredi' && ['Konut Kredisi', 'Taşıt Kredisi', 'İhtiyaç Kredisi', 'KYK Kredisi'].includes(selectedCategory);
+
+  // Kredi Hesaplama Mantığı
+  useEffect(() => {
+    if (isDetailedCredit && principal && interestRate && months) {
+      // Virgüllü formatı sayıya çevir: "3.500,50" -> 3500.50
+      const parseTr = (s: string) => parseFloat(s.replace(/\./g, '').replace(',', '.'));
+      
+      const p = parseTr(principal);
+      const i = parseTr(interestRate) / 100; // Aylık faiz oranı
+      const n = parseInt(months);
+      
+      if (p > 0 && i > 0 && n > 0) {
+        const monthly = (p * i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+        setAmount(monthly.toFixed(2).replace('.', ','));
+      } else if (p > 0 && i === 0 && n > 0) {
+        setAmount((p / n).toFixed(2).replace('.', ','));
+      }
+    }
+  }, [principal, interestRate, months, isDetailedCredit]);
 
   const onChangeDate = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') setShowDatePicker(false);
@@ -96,6 +116,31 @@ export default function AddScreen() {
     const d = new Date();
     return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1).toString().padStart(2, '0')}.${d.getFullYear()}`;
   });
+
+  // Kişiselleştirilmiş Çift Modlu Formatlayıcı
+  const formatTurkishNumber = (val: string, isPercent = false) => {
+    if (!val) return '';
+
+    if (isPercent) {
+      // FAİZ İÇİN: Otomatik Virgül (352 -> 3,52)
+      let cleaned = val.replace(/\D/g, '');
+      if (cleaned.length === 0) return '';
+      if (cleaned.length <= 2) return `0,${cleaned.padStart(2, '0')}`;
+      let integerPart = cleaned.slice(0, -2);
+      let decimalPart = cleaned.slice(-2);
+      return `${parseInt(integerPart)},${decimalPart}`;
+    } else {
+      // PARA İÇİN: Doğal Yazım + Binlik Noktası (15000 -> 15.000)
+      // Noktayı virgüle çevir, diğer her şeyi temizle
+      let cleaned = val.replace(/\./g, '').replace(/,/g, '#').replace(/[^0-9#]/g, '').replace(/#/g, ',');
+      const parts = cleaned.split(',');
+      let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      let decimalPart = parts[1] !== undefined ? parts[1].slice(0, 2) : undefined;
+
+      if (decimalPart !== undefined) return `${integerPart},${decimalPart}`;
+      return integerPart;
+    }
+  };
 
   const getDynamicTitleLabel = () => {
     if (selectedDocType.id === 'kredi') {
@@ -204,11 +249,26 @@ export default function AddScreen() {
       if (isDetailedCredit) {
          if (months) additionalText += `\nVade: ${months} Ay`;
          if (interestRate) additionalText += `\nFaiz Oranı: %${interestRate}`;
+         if (principal) additionalText += `\nAnapara: ${principal} TL`;
+         additionalText += `\nAylık Taksit: ${amount} TL`;
+         const parseTr = (s: string) => parseFloat(s.replace(/\./g, '').replace(',', '.'));
+         const totalRepayment = (parseTr(amount) * parseInt(months));
+         additionalText += `\nToplam Geri Ödeme: ${totalRepayment.toFixed(2).replace('.', ',')} TL`;
       }
 
-      // Hatırlatma tercihlerini kaydet
+      // Hatırlatma tercihlerini Türkçe olarak kaydet
       if (selectedReminders.length > 0) {
-        additionalText += `\nHatırlatma: ${selectedReminders.join(',')}`;
+        const reminderLabels: Record<string, string> = {
+          '1_minute': '1 Dakika',
+          '1_week': '1 Hafta',
+          '2_weeks': '2 Hafta',
+          '3_weeks': '3 Hafta',
+          '1_month': '1 Ay',
+          '2_months': '2 Ay',
+          '3_months': '3 Ay'
+        };
+        const turkishReminders = selectedReminders.map(r => reminderLabels[r] || r);
+        additionalText += `\nHatırlatma: ${turkishReminders.join(', ')}`;
       }
 
       const triggerCalendarPrompt = (docTitle: string, docTypeLabel: string) => {
@@ -358,18 +418,75 @@ export default function AddScreen() {
             />
           </View>
 
-          <Text style={styles.inputLabel}>{getDynamicAmountLabel()}</Text>
+          <Text style={styles.inputLabel}>{isDetailedCredit ? 'Anapara (TL)' : getDynamicAmountLabel()}</Text>
           <View style={[styles.inputWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
             <Ionicons name="cash-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: isDark ? '#ffffff' : '#000000' }]}
-              placeholder="0.00"
+              placeholder="0,00"
               placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
-              keyboardType="numeric"
-              value={amount}
-              onChangeText={setAmount}
+              keyboardType="decimal-pad"
+              value={isDetailedCredit ? principal : amount}
+              onChangeText={(val) => {
+                const formatted = formatTurkishNumber(val);
+                if (isDetailedCredit) setPrincipal(formatted);
+                else setAmount(formatted);
+              }}
             />
           </View>
+
+          {isDetailedCredit && (
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.inputLabel}>Vade (Ay)</Text>
+                <View style={[styles.inputWrapper, { marginBottom: 0, backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+                  <Ionicons name="time-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: isDark ? '#ffffff' : '#000000' }]}
+                    placeholder="36"
+                    placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
+                    keyboardType="decimal-pad"
+                    value={months}
+                    onChangeText={setMonths}
+                  />
+                </View>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={styles.inputLabel}>Faiz (%)</Text>
+                <View style={[styles.inputWrapper, { marginBottom: 0, backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+                  <Ionicons name="stats-chart-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: isDark ? '#ffffff' : '#000000' }]}
+                    placeholder="0,00"
+                    placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
+                    keyboardType="decimal-pad"
+                    value={interestRate}
+                    onChangeText={(val) => setInterestRate(formatTurkishNumber(val, true))}
+                  />
+                </View>
+              </View>
+            </View>
+          )}
+
+          {isDetailedCredit && amount !== '' && (
+            <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={{ padding: 16, borderRadius: 16, marginBottom: 24, borderWidth: 1, borderColor: '#6366f133' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                <View>
+                  <Text style={{ color: '#6366f1', fontWeight: '800', fontSize: 10, textTransform: 'uppercase', marginBottom: 4 }}>Aylık Taksit</Text>
+                  <Text style={{ color: isDark ? '#fff' : '#000', fontSize: 20, fontWeight: '900' }}>{parseFloat(amount).toLocaleString('tr-TR')} TL</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ color: '#10b981', fontWeight: '800', fontSize: 10, textTransform: 'uppercase', marginBottom: 4 }}>Toplam Geri Ödeme</Text>
+                  <Text style={{ color: isDark ? '#fff' : '#000', fontSize: 20, fontWeight: '900' }}>{(parseFloat(amount) * parseInt(months)).toLocaleString('tr-TR')} TL</Text>
+                </View>
+              </View>
+              <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', marginBottom: 8 }} />
+              <Text style={{ color: '#71717a', fontSize: 11, fontWeight: '600' }}>
+                Toplam Faiz: {((parseFloat(amount) * parseInt(months)) - parseFloat(principal)).toLocaleString('tr-TR')} TL
+              </Text>
+            </BlurView>
+          )}
 
           <Text style={styles.inputLabel}>{getDynamicDateLabel()}</Text>
           {Platform.OS === 'web' ? (
@@ -407,39 +524,6 @@ export default function AddScreen() {
             </>
           )}
 
-          {isDetailedCredit && (
-            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>Vade (Ay)</Text>
-                <View style={[styles.inputWrapper, { marginBottom: 0, backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
-                  <Ionicons name="time-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.input, { color: isDark ? '#ffffff' : '#000000' }]}
-                    placeholder="36"
-                    placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
-                    keyboardType="numeric"
-                    value={months}
-                    onChangeText={setMonths}
-                  />
-                </View>
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>Faiz (%)</Text>
-                <View style={[styles.inputWrapper, { marginBottom: 0, backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
-                  <Ionicons name="stats-chart-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.input, { color: isDark ? '#ffffff' : '#000000' }]}
-                    placeholder="1.99"
-                    placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
-                    keyboardType="numeric"
-                    value={interestRate}
-                    onChangeText={setInterestRate}
-                  />
-                </View>
-              </View>
-            </View>
-          )}
 
           {/* Kategori */}
           {selectedDocType.categories && (
