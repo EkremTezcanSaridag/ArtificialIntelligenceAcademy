@@ -27,6 +27,14 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   },
 });
 
+export interface AnalysisResult {
+  title: string;
+  amount: string;
+  date: string;
+  summary: string;
+  category?: string;
+}
+
 export interface OCRResponse {
   status: string;
   message: string;
@@ -44,7 +52,9 @@ export const uploadInvoice = async (
   category: string,
   documentType: 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' = 'warranty',
   additionalText?: string,
-  base64Image?: string
+  base64Image?: string,
+  amount?: number,
+  dueDate?: string
 ): Promise<OCRResponse> => {
   
   try {
@@ -74,14 +84,18 @@ export const uploadInvoice = async (
     const extractedText = ocrData.ParsedResults[0].ParsedText;
 
     console.log("2. Groq Yapay Zekası ile metin düzeltiliyor...");
-    const groqPrompt = `Aşağıda bir faturadan OCR ile okunmuş bozuk bir metin var. 
-Lütfen bu metindeki okuma hatalarını düzelt ve uygulamamızın parse edebilmesi için KESİNLİKLE aşağıdaki şablona göre formatla.
+    const groqPrompt = `Sen bir belge analiz uzmanısın. Aşağıdaki OCR metnini incele ve belgenin türüne göre (Fatura, Garanti, Sözleşme vb.) en kritik bilgileri hatasız çıkar.
+Özellikle şu kurallara dikkat et:
+1. TUTAR: Belgedeki "GENEL TOPLAM" veya "ÖDENECEK TUTAR" kısmını bul. Sadece sayısal değer döndür.
+2. TARİH: Belge üzerindeki en güncel/geçerli tarihi (Fatura tarihi, Bitiş tarihi vb.) GG.AA.YYYY formatında belirle.
+3. DETAY: Belgede ne satın alındığını, kurum adını ve varsa taksit bilgilerini içeren profesyonel bir özet yaz.
+
 Şablon:
-Bitiş Tarihi: GG.AA.YYYY (Veya duruma göre: 'Satın Alma Tarihi: GG.AA.YYYY', 'Son Ödeme Tarihi: GG.AA.YYYY', 'Taksit Ödeme Günü: GG.AA.YYYY')
-Tutar: 1500 (Sadece sayısal değer)
-Vade: 6 (Sadece sayı, taksit varsa)
-Hatırlatma: 1_week (Mevcut seçenekler: 1_minute, 1_week, 2_weeks, 1_month, 3_months)
-Özet: Belgenin kimden/nereden geldiği ve ne olduğu hakkında 1 kısa cümle.
+Bitiş Tarihi: GG.AA.YYYY (Veya: 'Satın Alma Tarihi: GG.AA.YYYY', 'Son Ödeme Tarihi: GG.AA.YYYY')
+Tutar: 1500 (Para birimi olmadan sadece sayı)
+Vade: 6 (Varsa taksit sayısı)
+Hatırlatma: 1 Hafta (Önerilen hatırlatma süresi: 1 Gün, 1 Hafta, 1 Ay vb.)
+Özet: Kurum adı ve alınan ürünlerin/hizmetlerin detaylı listesini içeren tamamen TÜRKÇE bir açıklama.
 
 OCR Metni:
 ${extractedText}`;
@@ -138,7 +152,9 @@ ${extractedText}`;
       filename: filename,
       raw_text: finalText,
       category: category,
-      type: documentType
+      type: documentType,
+      amount: amount || null,
+      due_date: dueDate ? dueDate.split('.').reverse().join('-') : null
     };
     
     // Eğer fotoğraf başarıyla yüklendiyse public URL'ini DB'ye kaydet
@@ -187,10 +203,17 @@ export const deleteInvoice = async (id: string) => {
   return true;
 };
 
-export const updateInvoiceText = async (id: string, newText: string) => {
+export const updateInvoiceDetails = async (id: string, updates: {
+  filename?: string,
+  amount?: number,
+  due_date?: string,
+  category?: string,
+  type?: string,
+  raw_text?: string
+}) => {
   const { error } = await supabase
     .from('invoices')
-    .update({ raw_text: newText })
+    .update(updates)
     .eq('id', id);
     
   if (error) {
@@ -215,7 +238,9 @@ export const addManualRecord = async (
         filename: title,
         raw_text: additionalText || `Tutar: ${amount} TL\nTarih: ${dueDate}`,
         category: category,
-        type: type
+        type: type,
+        amount: parseFloat(amount) || 0,
+        due_date: dueDate.split('.').reverse().join('-') // GG.AA.YYYY -> YYYY-AA-GG
       }
     ]);
 
@@ -224,4 +249,99 @@ export const addManualRecord = async (
     throw error;
   }
   return data;
+};
+
+export const analyzeDocument = async (uri: string, filename: string, mimeType: string, base64Image: string): Promise<AnalysisResult> => {
+  if (!GROQ_API_KEY) {
+    console.error("GROQ_API_KEY bulunamadı! Lütfen EXPO_PUBLIC_GROQ_API_KEY ortam değişkenini ayarlayın.");
+    throw new Error("Yapılandırma hatası: API anahtarı eksik.");
+  }
+
+  try {
+    const formData = new FormData();
+    if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        formData.append('file', blob, filename);
+    } else {
+        formData.append('file', { uri, name: filename, type: mimeType } as any);
+    }
+    formData.append('apikey', OCR_API_KEY);
+    formData.append('language', 'tur');
+    formData.append('filetype', 'JPG'); 
+
+    const ocrResponse = await fetch('https://api.ocr.space/parse/image', {
+      method: 'POST',
+      body: formData,
+    });
+    const ocrData = await ocrResponse.json();
+
+    if (ocrData.OCRExitCode !== 1) {
+      throw new Error('OCR Hatası: Metin okunamadı.');
+    }
+    const extractedText = ocrData.ParsedResults[0].ParsedText;
+
+    const groqPrompt = `Sen profesyonel bir veri çıkarma asistanısın. Aşağıdaki karmaşık OCR metninden en doğru verileri ayıkla.
+Hata yapmamaya odaklan, özellikle tutar kısmında belgedeki EN SON/EN ALT toplam rakamı (GENEL TOPLAM) baz al.
+
+Çıkarılacak Bilgiler:
+1. title: Şirket adı veya ürün adı (Örn: "Amazon Türkiye", "Türk Telekom").
+2. amount: Belgedeki EN SON ve EN BÜYÜK toplam tutar (GENEL TOPLAM). 
+   TÜRKİYE SAYI FORMATI KURALLARI: 
+   - VİRGÜL (,) her zaman kuruş (ondalık) ayracıdır. Örn: "1.250,50" -> "1250.50".
+   - NOKTA (.) genellikle binlik ayırıcıdır ve SİLİNMELİDİR. Örn: "10.200" -> "10200.00".
+   - ÖNEMLİ: Eğer noktadan sonra 3 basamak varsa (Örn: .200, .500, .000) bu bir binlik ayırıcıdır, sakın ondalık sanma.
+   - Sadece noktadan sonra TAM 2 BASAMAK varsa ve başka virgül yoksa ondalık sayabilirsin.
+   - Çıktı formatı sadece sayı olmalı (Örn: "10200.00").
+3. date: Belge üzerindeki işlem tarihi veya son ödeme tarihi (Format: GG.AA.YYYY).
+4. category: Belge içeriğine göre en uygun kategori (Seçenekler: Elektronik, Mutfak, Giyim, Vergi, Fatura, Borç, Diğer).
+5. summary: Belgenin içeriğini, varsa alınan ürünlerin listesini ve hatırlatma önerisini (Örn: "1 Hafta önce hatırlatılmalı") içeren tamamen TÜRKÇE detaylı bir açıklama.
+
+Yalnızca aşağıdaki formatta GEÇERLİ BİR JSON döndür:
+{
+  "title": "...",
+  "amount": "...",
+  "date": "...",
+  "category": "...",
+  "summary": "..."
+}
+
+OCR Metni:
+${extractedText}`;
+
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "user", content: groqPrompt }],
+        temperature: 0.1,
+        max_tokens: 512,
+        response_format: { type: "json_object" }
+      })
+    });
+
+    if (!groqResponse.ok) {
+      const errorData = await groqResponse.text();
+      console.error("Groq API Hatası:", errorData);
+      throw new Error(`Yapay zeka analizi başarısız oldu: ${groqResponse.status}`);
+    }
+    
+    const groqData = await groqResponse.json();
+    const result = JSON.parse(groqData.choices[0].message.content);
+    
+    return {
+      title: result.title || "",
+      amount: result.amount || "",
+      date: result.date || "",
+      category: result.category || "",
+      summary: result.summary || ""
+    };
+  } catch (error) {
+    console.error("Analiz Hatası:", error);
+    throw error;
+  }
 };
