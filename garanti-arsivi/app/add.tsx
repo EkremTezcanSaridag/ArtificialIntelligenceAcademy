@@ -242,7 +242,17 @@ export default function AddScreen() {
 
       if (image && base64Image) {
         const filename = title ? `${title}` : (image.split('/').pop() || 'belge.jpg');
-        const response = await uploadInvoice(image, filename, 'image/jpeg', selectedCategory, selectedDocType.id, additionalText, base64Image);
+        const response = await uploadInvoice(
+          image, 
+          filename, 
+          'image/jpeg', 
+          selectedCategory, 
+          selectedDocType.id, 
+          additionalText, 
+          base64Image,
+          parseFloat(amount) || 0,
+          formattedDate
+        );
         setResult(response.data.text);
         
         // Tüm belge türleri için bildirim zamanla

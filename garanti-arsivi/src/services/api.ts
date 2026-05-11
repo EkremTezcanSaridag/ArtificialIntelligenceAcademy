@@ -52,7 +52,9 @@ export const uploadInvoice = async (
   category: string,
   documentType: 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' = 'warranty',
   additionalText?: string,
-  base64Image?: string
+  base64Image?: string,
+  amount?: number,
+  dueDate?: string
 ): Promise<OCRResponse> => {
   
   try {
@@ -150,7 +152,9 @@ ${extractedText}`;
       filename: filename,
       raw_text: finalText,
       category: category,
-      type: documentType
+      type: documentType,
+      amount: amount || null,
+      due_date: dueDate ? dueDate.split('.').reverse().join('-') : null
     };
     
     // Eğer fotoğraf başarıyla yüklendiyse public URL'ini DB'ye kaydet
@@ -199,10 +203,17 @@ export const deleteInvoice = async (id: string) => {
   return true;
 };
 
-export const updateInvoiceText = async (id: string, newText: string) => {
+export const updateInvoiceDetails = async (id: string, updates: {
+  filename?: string,
+  amount?: number,
+  due_date?: string,
+  category?: string,
+  type?: string,
+  raw_text?: string
+}) => {
   const { error } = await supabase
     .from('invoices')
-    .update({ raw_text: newText })
+    .update(updates)
     .eq('id', id);
     
   if (error) {
@@ -227,7 +238,9 @@ export const addManualRecord = async (
         filename: title,
         raw_text: additionalText || `Tutar: ${amount} TL\nTarih: ${dueDate}`,
         category: category,
-        type: type
+        type: type,
+        amount: parseFloat(amount) || 0,
+        due_date: dueDate.split('.').reverse().join('-') // GG.AA.YYYY -> YYYY-AA-GG
       }
     ]);
 
@@ -273,11 +286,13 @@ Hata yapmamaya odaklan, özellikle tutar kısmında belgedeki EN SON/EN ALT topl
 
 Çıkarılacak Bilgiler:
 1. title: Şirket adı veya ürün adı (Örn: "Amazon Türkiye", "Türk Telekom").
-2. amount: Belgedeki net toplam tutar. 
-   ÖNEMLİ KURALLAR: 
-   - Noktadan/Virgülden sonra 2 basamak varsa bunlar KURUŞTUR. Örn: "30.46" -> "30.46" (Sakın 3046 yapma!).
-   - Türkiye'de virgül (,) ondalık ayırıcıdır. Örn: "120,50" -> "120.50".
-   - Yanlış Örnek: OCR metninde "30.46" yazıyorsa bunu "3046" olarak döndürmek HATALIDIR. Doğrusu "30.46"dır.
+2. amount: Belgedeki EN SON ve EN BÜYÜK toplam tutar (GENEL TOPLAM). 
+   TÜRKİYE SAYI FORMATI KURALLARI: 
+   - VİRGÜL (,) her zaman kuruş (ondalık) ayracıdır. Örn: "1.250,50" -> "1250.50".
+   - NOKTA (.) genellikle binlik ayırıcıdır ve SİLİNMELİDİR. Örn: "10.200" -> "10200.00".
+   - ÖNEMLİ: Eğer noktadan sonra 3 basamak varsa (Örn: .200, .500, .000) bu bir binlik ayırıcıdır, sakın ondalık sanma.
+   - Sadece noktadan sonra TAM 2 BASAMAK varsa ve başka virgül yoksa ondalık sayabilirsin.
+   - Çıktı formatı sadece sayı olmalı (Örn: "10200.00").
 3. date: Belge üzerindeki işlem tarihi veya son ödeme tarihi (Format: GG.AA.YYYY).
 4. category: Belge içeriğine göre en uygun kategori (Seçenekler: Elektronik, Mutfak, Giyim, Vergi, Fatura, Borç, Diğer).
 5. summary: Belgenin içeriğini, varsa alınan ürünlerin listesini ve hatırlatma önerisini (Örn: "1 Hafta önce hatırlatılmalı") içeren tamamen TÜRKÇE detaylı bir açıklama.

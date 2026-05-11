@@ -1,12 +1,12 @@
 import {
   View, Text, StyleSheet, FlatList, ActivityIndicator,
-  RefreshControl, Animated, Pressable, Dimensions, Platform, ScrollView, Modal, Image
+  RefreshControl, Animated, Pressable, Dimensions, Platform, ScrollView, Modal, Image, TextInput
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, router } from 'expo-router';
-import { fetchInvoices, deleteInvoice } from '../src/services/api';
+import { fetchInvoices, deleteInvoice, updateInvoiceDetails } from '../src/services/api';
 import { registerForPushNotificationsAsync, scheduleReminderNotification } from '../src/services/notifications';
 import type { ReminderOption } from '../src/services/notifications';
 import { BlurView } from 'expo-blur';
@@ -45,6 +45,10 @@ export default function HomeScreen() {
   const [currentPlan, setCurrentPlan] = useState<any[] | null>(null);
   const [currentPlanTitle, setCurrentPlanTitle] = useState('');
   const [detailItem, setDetailItem] = useState<any>(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editAmount, setEditAmount] = useState('');
   const { isDark, toggleTheme } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -154,6 +158,25 @@ export default function HomeScreen() {
       );
     }
   };
+  
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+    try {
+      await updateInvoiceDetails(editingItem.id, {
+        filename: editTitle,
+        amount: parseFloat(editAmount) || 0,
+      });
+      setWarranties(prev => prev.map(item => 
+        item.id === editingItem.id 
+          ? { ...item, filename: editTitle, amount: parseFloat(editAmount) || 0 } 
+          : item
+      ));
+      setEditModalVisible(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      Alert.alert('Hata', 'Güncelleme yapılamadı.');
+    }
+  };
 
   const filteredData = warranties.filter(item => {
     if (activeTab === 'warranty') return item.type === 'warranty' || !item.type;
@@ -164,6 +187,7 @@ export default function HomeScreen() {
 
   // Yaklaşanları hesapla (kullanıcının seçtiği hatırlatma süresine göre)
   const upcomingItems = warranties.map(w => {
+    const rawText = w.raw_text || '';
     const datePatterns = [
       /Son Kullanma Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
       /Son Ödeme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
@@ -173,12 +197,15 @@ export default function HomeScreen() {
       /Geri Ödeme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
     ];
     let targetDate = null;
-    const rawText = w.raw_text || '';
-    for (const pattern of datePatterns) {
-      const match = rawText.match(pattern);
-      if (match) {
-        targetDate = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
-        break;
+    if (w.due_date) {
+      targetDate = new Date(w.due_date);
+    } else {
+      for (const pattern of datePatterns) {
+        const match = rawText.match(pattern);
+        if (match) {
+          targetDate = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+          break;
+        }
       }
     }
     if (!targetDate) return null;
@@ -296,6 +323,11 @@ export default function HomeScreen() {
                    <View style={styles.dot} />
                    <Text style={[styles.dateValue, { color: isDark ? '#71717a' : '#a1a1aa' }]}>{formatDate(item.created_at)}</Text>
                 </View>
+                {item.amount > 0 && (
+                  <Text style={[styles.amountText, { color: tabCfg.color }]}>
+                    {item.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL
+                  </Text>
+                )}
                 {item.type === 'kredi' && item.raw_text?.includes('Vade:') && (
                   <Pressable 
                     onPress={() => {
@@ -315,28 +347,58 @@ export default function HomeScreen() {
                 )}
              </View>
 
-             <Pressable
-                style={({ pressed }) => [styles.deleteBtn, { opacity: pressed ? 0.5 : 1 }]}
-                onPress={() => handleDelete(item.id)}
-                hitSlop={15}
-             >
-                <View style={[styles.deleteIconBg, { backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)' }]}>
-                   <Ionicons name="trash" size={18} color="#ef4444" />
-                </View>
-             </Pressable>
+             <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Pressable
+                  style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.5 : 1 }]}
+                  onPress={() => {
+                    setEditingItem(item);
+                    setEditTitle(item.filename);
+                    
+                    // Eğer veritabanında tutar yoksa metinden çekmeye çalış
+                    let initialAmount = item.amount?.toString() || '';
+                    if (!initialAmount || initialAmount === '0') {
+                      const amountMatch = item.raw_text?.match(/Tutar:\s*([\d.,]+)/);
+                      if (amountMatch) initialAmount = amountMatch[1].replace(',', '.');
+                    }
+                    
+                    setEditAmount(initialAmount);
+                    setEditModalVisible(true);
+                  }}
+                  hitSlop={15}
+                >
+                  <View style={[styles.actionIconBg, { backgroundColor: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.08)' }]}>
+                    <Ionicons name="create-outline" size={18} color="#6366f1" />
+                  </View>
+                </Pressable>
+
+                <Pressable
+                    style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.5 : 1 }]}
+                    onPress={() => handleDelete(item.id)}
+                    hitSlop={15}
+                >
+                    <View style={[styles.actionIconBg, { backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)' }]}>
+                      <Ionicons name="trash" size={18} color="#ef4444" />
+                    </View>
+                </Pressable>
+             </View>
           </View>
         </Pressable>
       </Animated.View>
     );
   };
 
-  if (loading && !refreshing) {
-    return (
-      <LinearGradient colors={isDark ? ['#050505', '#0a0a1a'] : ['#f8fafc', '#f1f5f9']} style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#6366f1" />
-      </LinearGradient>
-    );
-  }
+  const renderSkeleton = () => (
+    <View style={[styles.cardContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }]}>
+      <View style={[styles.cardIndicator, { backgroundColor: isDark ? '#3f3f46' : '#e2e8f0' }]} />
+      <View style={styles.cardContent}>
+        <View style={[styles.iconContainer, { backgroundColor: isDark ? '#27272a' : '#f1f5f9' }]} />
+        <View style={styles.cardTextContainer}>
+          <View style={[styles.skeletonLine, { width: '60%', backgroundColor: isDark ? '#27272a' : '#f1f5f9' }]} />
+          <View style={[styles.skeletonLine, { width: '40%', height: 10, marginTop: 8, backgroundColor: isDark ? '#18181b' : '#f8fafc' }]} />
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <LinearGradient colors={isDark ? ['#050505', '#0a0a1a'] : ['#f8fafc', '#f1f5f9']} style={styles.container}>
@@ -404,14 +466,14 @@ export default function HomeScreen() {
       </View>
 
       <FlatList
-        data={filteredData}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
+        data={loading && !refreshing ? [1, 2, 3, 4, 5] : filteredData}
+        keyExtractor={(item, index) => loading ? `skeleton-${index}` : item.id}
+        renderItem={loading && !refreshing ? renderSkeleton : renderItem}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={activeTabConfig.color} />}
         ListHeaderComponent={() => {
-          if (upcomingItems.length === 0) return null;
+          if (loading || upcomingItems.length === 0) return null;
 
           return (
             <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], marginBottom: 20 }}>
@@ -505,6 +567,69 @@ export default function HomeScreen() {
                   </View>
                 </View>
               ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Modal */}
+      <Modal visible={editModalVisible} animationType="fade" transparent={true}>
+        <BlurView intensity={isDark ? 60 : 80} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, { height: 'auto', paddingBottom: 60, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: isDark ? '#18181b' : '#ffffff' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#000' }]}>Belgeyi Düzenle</Text>
+              <Pressable onPress={() => setEditModalVisible(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={24} color={isDark ? '#a1a1aa' : '#52525b'} />
+              </Pressable>
+            </View>
+            
+            <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
+              <View style={{ gap: 20 }}>
+                {editingItem?.image_url && (
+                  <View style={{ marginBottom: 10 }}>
+                    <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Belge Görseli</Text>
+                    <Image 
+                      source={{ uri: editingItem.image_url }} 
+                      style={{ width: '100%', height: 200, borderRadius: 16 }} 
+                      resizeMode="cover"
+                    />
+                  </View>
+                )}
+
+                <View>
+                  <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Belge Adı</Text>
+                  <TextInput
+                    style={[styles.editInput, { color: isDark ? '#fff' : '#000', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}
+                    value={editTitle}
+                    onChangeText={setEditTitle}
+                    placeholder="Belge Adı"
+                    placeholderTextColor="#71717a"
+                  />
+                </View>
+
+                <View>
+                  <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Tutar (TL)</Text>
+                  <TextInput
+                    style={[styles.editInput, { color: isDark ? '#fff' : '#000', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}
+                    value={editAmount}
+                    onChangeText={setEditAmount}
+                    keyboardType="numeric"
+                    placeholder="0.00"
+                    placeholderTextColor="#71717a"
+                  />
+                </View>
+
+                <Pressable 
+                  onPress={handleSaveEdit}
+                  style={({ pressed }) => [
+                    styles.saveEditBtn,
+                    { backgroundColor: activeTabConfig.color, transform: [{ scale: pressed ? 0.98 : 1 }] }
+                  ]}
+                >
+                  <Text style={styles.saveEditBtnText}>Değişiklikleri Kaydet</Text>
+                </Pressable>
+              </View>
             </ScrollView>
           </View>
         </View>
@@ -776,10 +901,16 @@ const styles = StyleSheet.create({
   productName: { fontSize: 16, fontWeight: '800', letterSpacing: -0.3, marginBottom: 4 },
   badgeRow: { flexDirection: 'row', alignItems: 'center' },
   categoryBadgeText: { fontSize: 13, fontWeight: '700', letterSpacing: 0.2 },
+  amountText: { fontSize: 14, fontWeight: '800', marginTop: 4 },
   dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#a1a1aa', marginHorizontal: 8 },
   dateValue: { fontSize: 12, fontWeight: '600' },
   deleteBtn: { justifyContent: 'center', alignItems: 'center' },
   deleteIconBg: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  actionBtn: { justifyContent: 'center', alignItems: 'center' },
+  actionIconBg: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  editInput: { padding: 16, borderRadius: 16, fontSize: 16, fontWeight: '600' },
+  saveEditBtn: { padding: 18, borderRadius: 16, alignItems: 'center', marginTop: 10 },
+  saveEditBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
   emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 60 },
   emptyIconContainer: { position: 'relative', width: 160, height: 160, justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
   emptyIconBg: { position: 'absolute', width: 160, height: 160, borderRadius: 80 },
@@ -798,6 +929,7 @@ const styles = StyleSheet.create({
   planDateCol: { flex: 1 },
   planMonth: { fontSize: 15, fontWeight: '800', marginBottom: 4 },
   planDateText: { fontSize: 13, color: '#a1a1aa', fontWeight: '600' },
+  skeletonLine: { height: 16, borderRadius: 8 },
   planAmountCol: { alignItems: 'flex-end' },
   planAmount: { fontSize: 16, fontWeight: '900', letterSpacing: -0.3, marginBottom: 6 },
   planStatusBadge: { backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
