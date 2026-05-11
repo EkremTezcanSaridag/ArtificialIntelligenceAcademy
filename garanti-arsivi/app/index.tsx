@@ -1,6 +1,6 @@
 import {
   View, Text, StyleSheet, FlatList, ActivityIndicator,
-  RefreshControl, Animated, Pressable, Dimensions, Platform, ScrollView, Modal
+  RefreshControl, Animated, Pressable, Dimensions, Platform, ScrollView, Modal, Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -161,6 +161,57 @@ export default function HomeScreen() {
   });
 
   const activeTabConfig = TABS.find(t => t.id === activeTab) || TABS[0];
+
+  // Yaklaşanları hesapla (kullanıcının seçtiği hatırlatma süresine göre)
+  const upcomingItems = warranties.map(w => {
+    const datePatterns = [
+      /Son Kullanma Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+      /Son Ödeme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+      /Bitiş Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+      /Satın Alma Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+      /Taksit Ödeme Günü:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+      /Geri Ödeme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+    ];
+    let targetDate = null;
+    const rawText = w.raw_text || '';
+    for (const pattern of datePatterns) {
+      const match = rawText.match(pattern);
+      if (match) {
+        targetDate = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+        break;
+      }
+    }
+    if (!targetDate) return null;
+
+    const reminderMatch = rawText.match(/Hatırlatma:\s*(.+)/);
+    if (!reminderMatch) return null; // Hatırlatma yoksa widget'ta gösterme
+
+    const reminders = reminderMatch[1].split(',');
+    let maxDaysBefore = 0;
+    const daysMap: Record<string, number> = {
+      '1_minute': 1,
+      '1_week': 7,
+      '2_weeks': 14,
+      '3_weeks': 21,
+      '1_month': 30,
+      '2_months': 60,
+      '3_months': 90,
+    };
+    for (const r of reminders) {
+      if (daysMap[r] && daysMap[r] > maxDaysBefore) {
+        maxDaysBefore = daysMap[r];
+      }
+    }
+
+    const diffDays = Math.ceil((targetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays >= 0 && diffDays <= maxDaysBefore) {
+      return { item: w, diffDays };
+    }
+    return null;
+  }).filter((x): x is {item: any, diffDays: number} => x !== null).sort((a, b) => a.diffDays - b.diffDays);
+
+  const [upcomingModalVisible, setUpcomingModalVisible] = useState(false);
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -359,6 +410,46 @@ export default function HomeScreen() {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={activeTabConfig.color} />}
+        ListHeaderComponent={() => {
+          if (upcomingItems.length === 0) return null;
+
+          return (
+            <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], marginBottom: 20 }}>
+              <Pressable onPress={() => setUpcomingModalVisible(true)} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+                <LinearGradient
+                  colors={isDark ? ['#3f2c00', '#1a1200'] : ['#fef3c7', '#fef08a']}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                  style={{
+                    padding: 20,
+                    borderRadius: 24,
+                    borderWidth: 1,
+                    borderColor: isDark ? '#b45309' : '#fde047',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    shadowColor: '#d97706',
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 16,
+                    elevation: 5
+                  }}
+                >
+                  <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(217, 119, 6, 0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
+                    <Ionicons name="warning" size={24} color="#d97706" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: isDark ? '#fcd34d' : '#92400e', marginBottom: 4 }}>
+                      Yaklaşan {upcomingItems.length} Ödeme / Bitiş
+                    </Text>
+                    <Text style={{ fontSize: 13, color: isDark ? '#fbbf24' : '#b45309', fontWeight: '600' }}>
+                      Zamanı yaklaşan {upcomingItems.length} belgeniz var. Detayları görmek için dokunun.
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={isDark ? '#fcd34d' : '#92400e'} />
+                </LinearGradient>
+              </Pressable>
+            </Animated.View>
+          );
+        }}
         ListEmptyComponent={
           <Animated.View style={[styles.emptyState, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
             <View style={styles.emptyIconContainer}>
@@ -456,7 +547,7 @@ export default function HomeScreen() {
                 </View>
                 {detailItem?.raw_text && (
                   <View style={{ marginTop: 8 }}>
-                    <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Belge Detayları</Text>
+                    <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Belge Detayları (Yapay Zeka Analizi)</Text>
                     <View style={[styles.detailTextBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
                       <Text style={[styles.detailRawText, { color: isDark ? '#d4d4d8' : '#3f3f46' }]}>
                         {detailItem.raw_text}
@@ -464,7 +555,182 @@ export default function HomeScreen() {
                     </View>
                   </View>
                 )}
+
+                {/* Orijinal Fotoğraf Gösterimi */}
+                {detailItem?.image_url && (
+                  <View style={{ marginTop: 24 }}>
+                    <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Orijinal Belge Görseli</Text>
+                    <View style={[styles.detailTextBox, { padding: 4, overflow: 'hidden', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                      <Image 
+                        source={{ uri: detailItem.image_url }} 
+                        style={{ width: '100%', height: 400, borderRadius: 12 }}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {/* Takvime Ekle Butonu */}
+                <Pressable
+                  style={({ pressed }) => [
+                    {
+                      marginTop: 24,
+                      paddingVertical: 14,
+                      paddingHorizontal: 20,
+                      borderRadius: 16,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)',
+                      borderWidth: 1,
+                      borderColor: isDark ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.2)',
+                      transform: [{ scale: pressed ? 0.96 : 1 }]
+                    }
+                  ]}
+                  onPress={() => {
+                    const title = encodeURIComponent(`${detailItem?.filename || 'Belge'} - Hatırlatma`);
+                    const details = encodeURIComponent(`Garanti Arşivi: ${getSubtitle(detailItem || {})}`);
+                    
+                    let targetDate = new Date();
+                    const rawText = detailItem?.raw_text || '';
+                    const datePatterns = [
+                      /Son Kullanma Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                      /Son Ödeme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                      /Bitiş Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                      /Satın Alma Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                      /Taksit Ödeme Günü:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                      /Geri Ödeme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                      /Tarih:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                      /Günü:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                    ];
+                    for (const pattern of datePatterns) {
+                      const match = rawText.match(pattern);
+                      if (match) {
+                        targetDate = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+                        break;
+                      }
+                    }
+
+                    const formatGDate = (d: Date) => d.toISOString().replace(/-|:|\.\d\d\d/g,"").split('T')[0];
+                    const dateStr = formatGDate(targetDate);
+                    const nextDayStr = formatGDate(new Date(targetDate.getTime() + 24*60*60*1000));
+                    
+                    const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${dateStr}/${nextDayStr}`;
+                    
+                    import('react-native').then(({ Linking }) => {
+                      Linking.openURL(gCalUrl).catch(() => {
+                        Alert.alert('Hata', 'Takvim açılamadı.');
+                      });
+                    });
+                  }}
+                >
+                  <Ionicons name="calendar" size={20} color="#6366f1" style={{ marginRight: 8 }} />
+                  <Text style={{ color: '#6366f1', fontSize: 16, fontWeight: '800' }}>Google Takvime Ekle</Text>
+                </Pressable>
               </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Upcoming Items Modal */}
+      <Modal
+        visible={upcomingModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setUpcomingModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <BlurView intensity={isDark ? 40 : 20} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setUpcomingModalVisible(false)} />
+          <View style={{ 
+            backgroundColor: isDark ? '#18181b' : '#ffffff', 
+            borderTopLeftRadius: 32, 
+            borderTopRightRadius: 32, 
+            maxHeight: '85%',
+            minHeight: '40%',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -10 },
+            shadowOpacity: 0.15,
+            shadowRadius: 20,
+            elevation: 20,
+            borderWidth: 1,
+            borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
+          }}>
+            <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 8 }}>
+              <View style={{ width: 40, height: 5, borderRadius: 3, backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' }} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(217, 119, 6, 0.2)', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="warning" size={20} color="#d97706" />
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: isDark ? '#ffffff' : '#18181b', letterSpacing: -0.5 }}>Yaklaşan Belgeler</Text>
+              </View>
+              <Pressable onPress={() => setUpcomingModalVisible(false)} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="close" size={20} color={isDark ? '#a1a1aa' : '#71717a'} />
+              </Pressable>
+            </View>
+
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+              {upcomingItems.map(({item, diffDays}) => {
+                const isUrgent = diffDays <= 3;
+                const tabConfig = TABS.find(t => t.id === item.type) || TABS[0];
+
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => {
+                      setUpcomingModalVisible(false);
+                      setDetailItem(item);
+                    }}
+                    style={({ pressed }) => [
+                      {
+                        borderRadius: 24,
+                        marginBottom: 16,
+                        overflow: 'hidden',
+                        transform: [{ scale: pressed ? 0.98 : 1 }]
+                      }
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={isUrgent ? (isDark ? ['#3f1d1d', '#200f0f'] : ['#fee2e2', '#fecaca']) : (isDark ? ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.02)'] : ['#ffffff', '#f8fafc'])}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      style={{
+                        padding: 20,
+                        borderWidth: 1,
+                        borderColor: isUrgent ? (isDark ? '#7f1d1d' : '#fca5a5') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'),
+                        borderRadius: 24,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 16
+                      }}
+                    >
+                      <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: tabConfig.color + '20', justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name={tabConfig.icon as any} size={20} color={tabConfig.color} />
+                      </View>
+                      
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 17, fontWeight: '800', color: isDark ? '#ffffff' : '#18181b', marginBottom: 4 }} numberOfLines={1}>
+                          {item.filename}
+                        </Text>
+                        <Text style={{ fontSize: 13, color: isDark ? '#a1a1aa' : '#71717a', fontWeight: '500' }}>
+                          Kategori: {item.category}
+                        </Text>
+                      </View>
+                      
+                      <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 22, fontWeight: '900', color: isUrgent ? '#ef4444' : (isDark ? '#f4f4f5' : '#3f3f46') }}>
+                          {diffDays === 0 ? 'Bugün' : `${diffDays}`}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: isUrgent ? '#ef4444' : (isDark ? '#a1a1aa' : '#71717a'), fontWeight: '700', marginTop: -2 }}>
+                          {diffDays === 0 ? 'Son Gün' : 'Gün Kaldı'}
+                        </Text>
+                      </View>
+                    </LinearGradient>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           </View>
         </View>
