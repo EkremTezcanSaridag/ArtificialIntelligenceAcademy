@@ -5,7 +5,7 @@ import {
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { uploadInvoice, addManualRecord } from '../src/services/api';
+import { uploadInvoice, addManualRecord, analyzeDocument } from '../src/services/api';
 import { registerForPushNotificationsAsync, scheduleReminderNotification } from '../src/services/notifications';
 import type { ReminderOption } from '../src/services/notifications';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -70,6 +70,7 @@ export default function AddScreen() {
   const [selectedDocType, setSelectedDocType] = useState<DocTypeConfig>(initialConfig);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialConfig.categories?.[0] || 'Diğer');
   const [selectedReminders, setSelectedReminders] = useState<ReminderOption[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { isDark } = useTheme();
 
   const [title, setTitle] = useState('');
@@ -138,9 +139,39 @@ export default function AddScreen() {
   const pickImage = async () => {
     let res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.8, base64: true });
     if (!res.canceled) { 
-        setImage(res.assets[0].uri); 
-        setBase64Image(res.assets[0].base64 || null);
+        const asset = res.assets[0];
+        setImage(asset.uri); 
+        setBase64Image(asset.base64 || null);
         setResult(null); 
+        
+        // Yapay zeka analizi başlat
+        if (asset.base64) {
+          handleAIAnalysis(asset.uri, asset.fileName || 'galeri_resim.jpg', 'image/jpeg', asset.base64);
+        }
+    }
+  };
+
+  const handleAIAnalysis = async (uri: string, filename: string, mime: string, base64: string) => {
+    setIsAnalyzing(true);
+    try {
+      const data = await analyzeDocument(uri, filename, mime, base64);
+      if (data.title) setTitle(data.title);
+      if (data.amount) setAmount(data.amount);
+      if (data.date) {
+        setFormattedDate(data.date);
+        const [d, m, y] = data.date.split('.').map(Number);
+        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+          setDate(new Date(y, m - 1, d));
+        }
+      }
+      if (data.category && selectedDocType.categories?.includes(data.category)) {
+        setSelectedCategory(data.category);
+      }
+      setResult(data.summary);
+    } catch (e) {
+      console.warn("AI Analiz hatası:", e);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -149,9 +180,15 @@ export default function AddScreen() {
     if (status !== 'granted') { Alert.alert('Hata', 'Kamera izni gerekiyor.'); return; }
     let res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8, base64: true });
     if (!res.canceled) { 
-        setImage(res.assets[0].uri); 
-        setBase64Image(res.assets[0].base64 || null);
+        const asset = res.assets[0];
+        setImage(asset.uri); 
+        setBase64Image(asset.base64 || null);
         setResult(null); 
+        
+        // Yapay zeka analizi başlat
+        if (asset.base64) {
+          handleAIAnalysis(asset.uri, 'kamera_resim.jpg', 'image/jpeg', asset.base64);
+        }
     }
   };
 
@@ -500,6 +537,13 @@ export default function AddScreen() {
           ) : (
             <View style={[styles.imageWrapper, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
               <Image source={{ uri: image }} style={styles.image} />
+              {isAnalyzing && (
+                <View style={styles.analyzingOverlay}>
+                  <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+                  <ActivityIndicator size="large" color="#6366f1" />
+                  <Text style={styles.analyzingText}>Yapay Zeka Analiz Ediyor...</Text>
+                </View>
+              )}
               <Pressable style={styles.editImageBtn} onPress={() => { setImage(null); setBase64Image(null); }}>
                 <Ionicons name="close" size={20} color="#fff" />
               </Pressable>
@@ -597,5 +641,7 @@ const styles = StyleSheet.create({
   resultBoxWrapper: { width: '100%', borderRadius: 24, overflow: 'hidden', marginBottom: 32, borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.3)' },
   resultBox: { width: '100%', padding: 24 },
   resultTitle: { color: '#6366f1', fontWeight: '900', letterSpacing: 0.5, fontSize: 14, textTransform: 'uppercase' },
-  resultText: { fontSize: 15, lineHeight: 26, fontWeight: '500' }
+  resultText: { fontSize: 15, lineHeight: 26, fontWeight: '500' },
+  analyzingOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', borderRadius: 26, overflow: 'hidden' },
+  analyzingText: { color: '#fff', marginTop: 12, fontWeight: '800', fontSize: 16, textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } }
 });
