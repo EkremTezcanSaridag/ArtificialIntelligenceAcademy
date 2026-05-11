@@ -150,14 +150,8 @@ async def upload_invoice(
 
 @app.get("/", response_class=HTMLResponse)
 async def splash(request: Request):
-    ua = request.headers.get('user-agent', '')
-    if 'Mobi' not in ua:
-        return RedirectResponse(url="/home")
-    splash_path = frontend_path / "splash.html"
-    if not splash_path.exists():
-        return HTMLResponse(content="<h1>Splash Page Not Found</h1>", status_code=404)
-    html_content = splash_path.read_text(encoding="utf-8")
-    return HTMLResponse(content=html_content)
+    # Splash ekranı kaldırıldı; doğrudan ana sayfaya yönlendir.
+    return RedirectResponse(url="/home")
 
 # Home page route – serves static home.html
 @app.get("/home", response_class=HTMLResponse)

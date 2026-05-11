@@ -13,7 +13,7 @@ SplashScreen.preventAutoHideAsync();
 
 function TabLayout() {
   const { isDark, toggleTheme } = useTheme();
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(Platform.OS !== 'web');
 
   useEffect(() => {
     // Native splash'i hemen kapat, yerini Custom splash alıyor

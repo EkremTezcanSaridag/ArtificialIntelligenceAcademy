@@ -433,12 +433,12 @@ export default function AddScreen() {
           <View style={styles.categoryContainer}>
             {[
               { id: '1_minute' as ReminderOption, label: 'Şimdi Test Et (1 Dk)' },
-              { id: '1_week' as ReminderOption, label: '1 Hafta Kala' },
-              { id: '2_weeks' as ReminderOption, label: '2 Hafta Kala' },
-              { id: '3_weeks' as ReminderOption, label: '3 Hafta Kala' },
-              { id: '1_month' as ReminderOption, label: '1 Ay Kala' },
-              { id: '2_months' as ReminderOption, label: '2 Ay Kala' },
-              { id: '3_months' as ReminderOption, label: '3 Ay Kala' },
+              { id: '1_week' as ReminderOption, label: '1 Hafta' },
+              { id: '2_weeks' as ReminderOption, label: '2 Hafta' },
+              { id: '3_weeks' as ReminderOption, label: '3 Hafta' },
+              { id: '1_month' as ReminderOption, label: '1 Ay' },
+              { id: '2_months' as ReminderOption, label: '2 Ay' },
+              { id: '3_months' as ReminderOption, label: '3 Ay' },
             ].map(opt => {
               const isActive = selectedReminders.includes(opt.id);
               return (
