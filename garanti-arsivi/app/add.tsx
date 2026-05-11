@@ -64,6 +64,7 @@ export default function AddScreen() {
   const initialConfig = DOC_TYPES.find(d => d.id === initialType) || DOC_TYPES[0];
 
   const [image, setImage] = useState<string | null>(null);
+  const [base64Image, setBase64Image] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [selectedDocType, setSelectedDocType] = useState<DocTypeConfig>(initialConfig);
@@ -135,15 +136,23 @@ export default function AddScreen() {
   };
 
   const pickImage = async () => {
-    let res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.8 });
-    if (!res.canceled) { setImage(res.assets[0].uri); setResult(null); }
+    let res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.8, base64: true });
+    if (!res.canceled) { 
+        setImage(res.assets[0].uri); 
+        setBase64Image(res.assets[0].base64 || null);
+        setResult(null); 
+    }
   };
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Hata', 'Kamera izni gerekiyor.'); return; }
-    let res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
-    if (!res.canceled) { setImage(res.assets[0].uri); setResult(null); }
+    let res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8, base64: true });
+    if (!res.canceled) { 
+        setImage(res.assets[0].uri); 
+        setBase64Image(res.assets[0].base64 || null);
+        setResult(null); 
+    }
   };
 
   const handleSave = async () => {
@@ -194,9 +203,9 @@ export default function AddScreen() {
         );
       };
 
-      if (image) {
+      if (image && base64Image) {
         const filename = title ? `${title}` : (image.split('/').pop() || 'belge.jpg');
-        const response = await uploadInvoice(image, filename, 'image/jpeg', selectedCategory, selectedDocType.id, additionalText);
+        const response = await uploadInvoice(image, filename, 'image/jpeg', selectedCategory, selectedDocType.id, additionalText, base64Image);
         setResult(response.data.text);
         
         // Tüm belge türleri için bildirim zamanla
@@ -491,7 +500,7 @@ export default function AddScreen() {
           ) : (
             <View style={[styles.imageWrapper, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
               <Image source={{ uri: image }} style={styles.image} />
-              <Pressable style={styles.editImageBtn} onPress={() => setImage(null)}>
+              <Pressable style={styles.editImageBtn} onPress={() => { setImage(null); setBase64Image(null); }}>
                 <Ionicons name="close" size={20} color="#fff" />
               </Pressable>
             </View>

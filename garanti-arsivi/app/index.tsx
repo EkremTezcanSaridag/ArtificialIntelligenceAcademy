@@ -1,6 +1,6 @@
 import {
   View, Text, StyleSheet, FlatList, ActivityIndicator,
-  RefreshControl, Animated, Pressable, Dimensions, Platform, ScrollView, Modal
+  RefreshControl, Animated, Pressable, Dimensions, Platform, ScrollView, Modal, Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -547,11 +547,25 @@ export default function HomeScreen() {
                 </View>
                 {detailItem?.raw_text && (
                   <View style={{ marginTop: 8 }}>
-                    <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Belge Detayları</Text>
+                    <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Belge Detayları (Yapay Zeka Analizi)</Text>
                     <View style={[styles.detailTextBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
                       <Text style={[styles.detailRawText, { color: isDark ? '#d4d4d8' : '#3f3f46' }]}>
                         {detailItem.raw_text}
                       </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Orijinal Fotoğraf Gösterimi */}
+                {detailItem?.image_url && (
+                  <View style={{ marginTop: 24 }}>
+                    <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Orijinal Belge Görseli</Text>
+                    <View style={[styles.detailTextBox, { padding: 4, overflow: 'hidden', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                      <Image 
+                        source={{ uri: detailItem.image_url }} 
+                        style={{ width: '100%', height: 400, borderRadius: 12 }}
+                        resizeMode="cover"
+                      />
                     </View>
                   </View>
                 )}
