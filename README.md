@@ -12,19 +12,16 @@
 - **Kontratlarım** — Kira sözleşmeleri, iş sözleşmeleri ve kontratları saklayın
 - **Borçlarım** — Kredi, KYK, elden borç ve taksit takibi yapın (ödeme planı görüntüleme dahil)
 
+### 🎨 Dinamik ve Akıcı Arayüz (Animasyonlar)
+- **Özel SVG Animasyonları** — Grafiklerin sıfırdan saat yönünde dolma efekti (`strokeDashoffset`)
+- **360° Rotasyonel Giriş** — İstatistiklerin dönerken büyüme (scale) animasyonuyla gelmesi
+- **Gelişmiş Mikro-Etkileşimler** — `react-native-reanimated` ile güçlendirilmiş yumuşak sayfa geçişleri
+- **Karanlık/Aydınlık Mod** — Temalar arası pürüzsüz görsel geçişler
 
-### 🤖 Yapay Zeka ile OCR & Analiz
-- **Groq Llama 4 Scout Integration** — En güncel çok modlu (multimodal) yapay zeka modeli ile yüksek doğrulukta belge tarama
-- Fotoğraf çekerek veya galeriden seçerek belgeleri otomatik taratma
-- OCR ile metin çıkarma ve yapılandırılmış veri oluşturma (Başlık, Tutar, Tarih, Para Birimi)
-- Akıllı hata ayıklama ve JSON veri işleme mekanizması
-
-### 📊 Gelişmiş Finansal İstatistikler & Animasyonlar
-- **Özel SVG Animasyon Motoru** — `react-native-svg` ve `reanimated` kullanılarak sıfırdan geliştirilen, statik grafiklerin ötesinde bir görsel deneyim.
-- **Sıfırdan Çizilme Efekti (Clockwise Draw)** — Grafik dilimlerinin saat yönünde dinamik olarak dolması (`strokeDashoffset` animasyonu).
-- **Dinamik Rotasyon** — Verilerin 360 derecelik bir dönüş ve `scale` efektiyle ekrana gelmesi.
-- **Mikro-Animasyonlar** — Sayfa geçişlerinde ve etkileşimlerde kullanılan yumuşak `Fade`, `Spring` ve `Layout` animasyonları.
-- **Çoklu Para Birimi Dönüşümü** — Anlık döviz kurlarıyla TRY, USD, EUR ve GBP desteği.
+### 📊 Gelişmiş Finansal İstatistikler
+- **Dinamik Harcama Analizi** — Tüm harcamaların kategorize edilmiş görsel sunumu
+- **Çoklu Para Birimi Desteği** — TRY, USD, EUR ve GBP arasında anlık döviz kurlarıyla otomatik dönüşüm
+- **Harcama Trendleri** — Son 6 aylık harcama değişimlerini gösteren interaktif grafikler
 
 ### 🔔 Akıllı Hatırlatma Sistemi
 Tüm belge türleri için son tarihlere yaklaşırken bildirim alma:
@@ -41,23 +38,18 @@ Tüm belge türleri için son tarihlere yaklaşırken bildirim alma:
 - Tek tuşla tema değişimi (sağ üst köşedeki ay/güneş ikonu)
 - Tüm sayfalarda tutarlı tema desteği
 
-
-### 📊 Borç & Taksit Takibi
-- Detaylı kredi bilgileri (vade, faiz oranı)
-- Otomatik ödeme planı oluşturma
-- Taksit bazlı takip modalı
-
 ## 🛠️ Teknoloji Yığını
 
 | Katman | Teknoloji |
 |--------|-----------|
 | **Frontend** | React Native + Expo |
+| **Animasyon Motoru** | **React Native Reanimated (v4)** |
+| **Vektörel Grafikler** | **React Native SVG (Custom Drawing)** |
 | **Navigasyon** | Expo Router (file-based routing) |
-| **UI** | Lucide Icons, Ionicons, SVG Animations |
+| **UI Bileşenleri** | Ionicons, Linear Gradient, Blur View |
 | **Yapay Zeka** | Groq Cloud API (Llama 4 Scout 17B) |
 | **Veritabanı** | Supabase (PostgreSQL + Storage) |
 | **Döviz Kurları** | Exchange Rate API |
-| **Animasyonlar** | React Native Reanimated (Keyframes & Layout Animations) |
 | **Bildirimler** | expo-notifications |
 
 ## 🚀 Kurulum
