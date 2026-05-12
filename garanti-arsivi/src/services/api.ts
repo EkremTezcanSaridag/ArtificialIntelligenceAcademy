@@ -72,16 +72,29 @@ export const uploadInvoice = async (
   // 1. Fotoğraf varsa Supabase Storage'a yükle
   if (base64Image) {
     console.log('1. Fotoğraf buluta (Supabase Storage) yükleniyor...');
+    
+    // Dosya adını sanitize et (Türkçe karakter ve boşlukları temizle)
+    const safeFilename = filename
+      .replace(/[\s]/g, '_')
+      .replace(/[ığüşöçİĞÜŞÖÇ]/g, (m) => {
+        const map: Record<string, string> = {
+          'ı': 'i', 'ğ': 'g', 'ü': 'u', 'ş': 's', 'ö': 'o', 'ç': 'c',
+          'İ': 'I', 'Ğ': 'G', 'Ü': 'U', 'Ş': 'S', 'Ö': 'O', 'Ç': 'C'
+        };
+        return map[m] || m;
+      })
+      .replace(/[^a-zA-Z0-9_.-]/g, '');
+
     const { decode } = require('base64-arraybuffer');
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('invoices')
-      .upload(filename, decode(base64Image), { contentType: mimeType });
+      .upload(safeFilename, decode(base64Image), { contentType: mimeType, upsert: true });
 
     if (uploadError) throw uploadError;
 
     const { data: urlData } = supabase.storage
       .from('invoices')
-      .getPublicUrl(filename);
+      .getPublicUrl(safeFilename);
     
     publicUrl = urlData.publicUrl;
     console.log('✅ Fotoğraf başarıyla yüklendi:', publicUrl);
@@ -89,6 +102,16 @@ export const uploadInvoice = async (
 
   // 2. Veritabanına kaydet
   console.log('2. Veritabanına kaydediliyor...');
+  
+  // Tarih formatını dönüştür: GG.AA.YYYY -> YYYY-AA-GG
+  let isoDate = null;
+  if (dueDate && dueDate.includes('.')) {
+    const [d, m, y] = dueDate.split('.');
+    if (d && m && y) isoDate = `${y}-${m}-${d}`;
+  } else {
+    isoDate = dueDate || null;
+  }
+
   const { error: dbError } = await supabase
     .from('invoices')
     .insert([
@@ -99,7 +122,7 @@ export const uploadInvoice = async (
         type: documentType,
         raw_text: finalText,
         amount: amount || 0,
-        due_date: dueDate || null,
+        due_date: isoDate,
         currency: currency
       }
     ]);
@@ -167,6 +190,10 @@ export const analyzeDocument = async (uri: string, filename: string, mime: strin
   if (!GROQ_API_KEY) throw new Error("Groq API anahtarı eksik");
 
   try {
+    // Görsel boyutunu logla (Hata ayıklama için)
+    const sizeInMB = (base64.length * (3/4)) / (1024 * 1024);
+    console.log(`Analiz ediliyor: ${filename}, Boyut: ${sizeInMB.toFixed(2)} MB`);
+
     const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -174,7 +201,7 @@ export const analyzeDocument = async (uri: string, filename: string, mime: strin
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "llama-3.2-11b-vision-preview",
+        model: "meta-llama/llama-4-scout-17b-16e-instruct",
         messages: [
           {
             role: "user",
@@ -183,7 +210,7 @@ export const analyzeDocument = async (uri: string, filename: string, mime: strin
                 type: "text",
                 text: `Sen profesyonel bir döküman analiz asistanısın. Bu dökümandan şu bilgileri ayıkla:
                 1. title: Şirket adı veya döküman konusu.
-                2. amount: Toplam tutar (Sayısal, nokta ondalık ayırıcı olmalı).
+                2. amount: Toplam tutar (Sayısal, nokta ondalık ayırıcı olmalı, para birimi sembolü OLMAMALI).
                 3. currency: Para birimi (TRY, USD, EUR, GBP).
                 4. date: İşlem tarihi (GG.AA.YYYY).
                 5. category: En uygun kategori.
@@ -198,13 +225,29 @@ export const analyzeDocument = async (uri: string, filename: string, mime: strin
             ]
           }
         ],
-        temperature: 0.1,
-        response_format: { type: "json_object" }
+        temperature: 0.1
       })
     });
 
+    if (!groqResponse.ok) {
+      const errorText = await groqResponse.text();
+      console.error("Groq API Hatası:", errorText);
+      throw new Error(`API Hatası: ${groqResponse.status}`);
+    }
+
     const groqData = await groqResponse.json();
-    const result = JSON.parse(groqData.choices[0].message.content);
+    if (!groqData.choices || groqData.choices.length === 0) {
+      throw new Error("API'den geçerli bir yanıt alınamadı.");
+    }
+
+    let content = groqData.choices[0].message.content;
+    // JSON'ı Markdown bloklarından ayıkla (eğer varsa)
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      content = jsonMatch[0];
+    }
+    
+    const result = JSON.parse(content);
 
     return {
       title: result.title || "",
@@ -215,7 +258,7 @@ export const analyzeDocument = async (uri: string, filename: string, mime: strin
       summary: result.summary || ""
     };
   } catch (error) {
-    console.error("Analiz Hatası:", error);
+    console.error("Analiz Hatası Detayı:", error);
     throw error;
   }
 };

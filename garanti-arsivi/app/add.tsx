@@ -238,7 +238,7 @@ export default function AddScreen() {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Hata', 'Kamera izni gerekiyor.'); return; }
-    let res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8, base64: true });
+    let res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.5, base64: true });
     if (!res.canceled) { 
         const asset = res.assets[0];
         setImage(asset.uri); 
@@ -378,6 +378,12 @@ export default function AddScreen() {
 
         {/* Header */}
         <View style={styles.pageHeader}>
+          <Pressable 
+            onPress={() => router.push('/')}
+            style={{ position: 'absolute', top: 0, left: 0, width: 44, height: 44, borderRadius: 22, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}
+          >
+            <Ionicons name="arrow-back" size={24} color={isDark ? '#fff' : '#000'} />
+          </Pressable>
           <LinearGradient colors={selectedDocType.colors} style={styles.iconCircle} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <Ionicons name={selectedDocType.icon as any} size={30} color="#fff" />
           </LinearGradient>

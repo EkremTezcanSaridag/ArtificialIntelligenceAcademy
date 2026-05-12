@@ -14,7 +14,7 @@ import { useTheme } from '../src/context/ThemeContext';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const getCurrencySymbol = (code: string) => {
   switch (code) {
@@ -37,13 +37,13 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { id: 'warranty',  label: 'Garanti Belgelerim', shortLabel: 'garanti belgesi',  icon: 'shield-checkmark', color: '#6366f1', colors: ['#6366f1', '#4338ca'] },
-  { id: 'invoice',   label: 'Faturalar',          shortLabel: 'fatura',           icon: 'receipt',          color: '#0ea5e9', colors: ['#0ea5e9', '#0284c7'] },
-  { id: 'mtv',       label: 'MTV',                shortLabel: 'MTV',              icon: 'car-sport',        color: '#f59e0b', colors: ['#f59e0b', '#d97706'] },
-  { id: 'konut',     label: 'Konut Vergisi',      shortLabel: 'konut vergisi',    icon: 'home',             color: '#10b981', colors: ['#10b981', '#059669'] },
-  { id: 'kontrat',   label: 'Kontratlarım',       shortLabel: 'kontrat',          icon: 'document-text',    color: '#8b5cf6', colors: ['#8b5cf6', '#7c3aed'] },
-  { id: 'kredi',     label: 'Borç Takibi',       shortLabel: 'borç',            icon: 'wallet',           color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
-  { id: 'subscription', label: 'Aboneliklerim',  shortLabel: 'abonelik',       icon: 'repeat',           color: '#ec4899', colors: ['#ec4899', '#db2777'] }
+  { id: 'warranty', label: 'Garanti Belgelerim', shortLabel: 'garanti belgesi', icon: 'shield-checkmark', color: '#6366f1', colors: ['#6366f1', '#4338ca'] },
+  { id: 'invoice', label: 'Faturalar', shortLabel: 'fatura', icon: 'receipt', color: '#0ea5e9', colors: ['#0ea5e9', '#0284c7'] },
+  { id: 'mtv', label: 'MTV', shortLabel: 'MTV', icon: 'car-sport', color: '#f59e0b', colors: ['#f59e0b', '#d97706'] },
+  { id: 'konut', label: 'Konut Vergisi', shortLabel: 'konut vergisi', icon: 'home', color: '#10b981', colors: ['#10b981', '#059669'] },
+  { id: 'kontrat', label: 'Kontratlarım', shortLabel: 'kontrat', icon: 'document-text', color: '#8b5cf6', colors: ['#8b5cf6', '#7c3aed'] },
+  { id: 'kredi', label: 'Borç Takibi', shortLabel: 'borç', icon: 'wallet', color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
+  { id: 'subscription', label: 'Aboneliklerim', shortLabel: 'abonelik', icon: 'repeat', color: '#ec4899', colors: ['#ec4899', '#db2777'] }
 ];
 
 export default function HomeScreen() {
@@ -61,6 +61,7 @@ export default function HomeScreen() {
   const [editTitle, setEditTitle] = useState('');
   const [editAmount, setEditAmount] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isImageFull, setIsImageFull] = useState(false);
   const { isDark, toggleTheme } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -101,7 +102,7 @@ export default function HomeScreen() {
               const reminderMatch = item.raw_text.match(/Hatırlatma:\s*(.+)/);
               if (!reminderMatch) continue;
               const reminders = reminderMatch[1].split(',') as ReminderOption[];
-              
+
               // Tarih formatını bul (GG.AA.YYYY)
               const datePatterns = [
                 /Son Kullanma Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
@@ -126,7 +127,7 @@ export default function HomeScreen() {
               }
             }
           }
-        } catch (e) {}
+        } catch (e) { }
       }
     } catch (error) {
       console.error("Veri çekilemedi:", error);
@@ -172,7 +173,7 @@ export default function HomeScreen() {
       );
     }
   };
-  
+
   const handleSaveEdit = async () => {
     if (!editingItem) return;
     try {
@@ -180,9 +181,9 @@ export default function HomeScreen() {
         filename: editTitle,
         amount: parseTurkishNumber(editAmount),
       });
-      setWarranties(prev => prev.map(item => 
-        item.id === editingItem.id 
-          ? { ...item, filename: editTitle, amount: parseTurkishNumber(editAmount) } 
+      setWarranties(prev => prev.map(item =>
+        item.id === editingItem.id
+          ? { ...item, filename: editTitle, amount: parseTurkishNumber(editAmount) }
           : item
       ));
       setEditModalVisible(false);
@@ -193,12 +194,12 @@ export default function HomeScreen() {
   };
 
   const filteredData = warranties.filter(item => {
-    const matchesTab = searchQuery.length > 0 
-      ? true 
+    const matchesTab = searchQuery.length > 0
+      ? true
       : (activeTab === 'warranty' ? (item.type === 'warranty' || !item.type) : item.type === activeTab);
-      
-    const matchesSearch = (item.filename || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (item.category || '').toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesSearch = (item.filename || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.category || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
@@ -251,12 +252,12 @@ export default function HomeScreen() {
     }
 
     const diffDays = Math.ceil((targetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays >= 0 && diffDays <= maxDaysBefore) {
       return { item: w, diffDays };
     }
     return null;
-  }).filter((x): x is {item: any, diffDays: number} => x !== null).sort((a, b) => a.diffDays - b.diffDays);
+  }).filter((x): x is { item: any, diffDays: number } => x !== null).sort((a, b) => a.diffDays - b.diffDays);
 
   const [upcomingModalVisible, setUpcomingModalVisible] = useState(false);
 
@@ -286,17 +287,17 @@ export default function HomeScreen() {
     const tutarMatch = rawText.match(/Tutar:\s*([\d.,]+)/);
     const vadeMatch = rawText.match(/Vade:\s*(\d+)/);
     const tarihMatch = rawText.match(/Tarih:\s*([\d.]+)|Günü:\s*([\d.]+)/);
-    
+
     if (!tutarMatch || !vadeMatch || !tarihMatch) return null;
-    
+
     const tutar = tutarMatch[1];
     const vade = parseInt(vadeMatch[1], 10);
-    const tarihStr = tarihMatch[1] || tarihMatch[2]; 
-    
+    const tarihStr = tarihMatch[1] || tarihMatch[2];
+
     const [day, month, year] = tarihStr.split('.').map(Number);
     let plan = [];
     let currentDate = new Date(year, month - 1, day);
-    
+
     for (let i = 0; i < vade; i++) {
       const fDate = `${currentDate.getDate().toString().padStart(2, '0')}.${(currentDate.getMonth() + 1).toString().padStart(2, '0')}.${currentDate.getFullYear()}`;
       plan.push({ id: i.toString(), date: fDate, amount: tutar, status: 'Ödenmedi' });
@@ -322,86 +323,86 @@ export default function HomeScreen() {
           onPress={() => setDetailItem(item)}
           style={({ pressed }) => [
             styles.cardContainer,
-            { 
-               backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff',
-               borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-               transform: [{ scale: pressed ? 0.98 : 1 }] 
+            {
+              backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff',
+              borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+              transform: [{ scale: pressed ? 0.98 : 1 }]
             }
           ]}
         >
           <View style={[styles.cardIndicator, { backgroundColor: tabCfg.color }]} />
 
           <View style={styles.cardContent}>
-             <View style={[styles.iconContainer, { backgroundColor: tabCfg.color + '1a' }]}>
-                <Ionicons name={getCategoryIcon(item.category) as any} size={24} color={tabCfg.color} />
-             </View>
+            <View style={[styles.iconContainer, { backgroundColor: tabCfg.color + '1a' }]}>
+              <Ionicons name={getCategoryIcon(item.category) as any} size={24} color={tabCfg.color} />
+            </View>
 
-             <View style={styles.cardTextContainer}>
-                <Text style={[styles.productName, { color: isDark ? '#ffffff' : '#09090b' }]} numberOfLines={1}>{item.filename}</Text>
-                <View style={styles.badgeRow}>
-                   <Text style={[styles.categoryBadgeText, { color: tabCfg.color }]}>{getSubtitle(item)}</Text>
-                   <View style={styles.dot} />
-                   <Text style={[styles.dateValue, { color: isDark ? '#71717a' : '#a1a1aa' }]}>{formatDate(item.created_at)}</Text>
-                </View>
-                {item.amount > 0 && (
-                  <Text style={[styles.amountText, { color: tabCfg.color }]}>
-                    {item.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {getCurrencySymbol(item.currency)}
-                  </Text>
-                )}
-                {item.type === 'kredi' && item.raw_text?.includes('Vade:') && (
-                  <Pressable 
-                    onPress={() => {
-                      const plan = generatePaymentPlan(item.raw_text);
-                      if (plan) {
-                        setCurrentPlan(plan);
-                        setCurrentPlanTitle(item.filename);
-                        setCurrentPlanItem(item);
-                        setPlanModalVisible(true);
-                      } else {
-                        Alert.alert('Hata', 'Ödeme planı oluşturulamadı. Veri eksik.');
-                      }
-                    }}
-                    style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: tabCfg.color + '22', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}
-                  >
-                    <Text style={{ color: tabCfg.color, fontSize: 11, fontWeight: '700' }}>Ödeme Planını Gör</Text>
-                  </Pressable>
-                )}
-             </View>
-
-             <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={styles.cardTextContainer}>
+              <Text style={[styles.productName, { color: isDark ? '#ffffff' : '#09090b' }]} numberOfLines={1}>{item.filename}</Text>
+              <View style={styles.badgeRow}>
+                <Text style={[styles.categoryBadgeText, { color: tabCfg.color }]}>{getSubtitle(item)}</Text>
+                <View style={styles.dot} />
+                <Text style={[styles.dateValue, { color: isDark ? '#71717a' : '#a1a1aa' }]}>{formatDate(item.created_at)}</Text>
+              </View>
+              {item.amount > 0 && (
+                <Text style={[styles.amountText, { color: tabCfg.color }]}>
+                  {item.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {getCurrencySymbol(item.currency)}
+                </Text>
+              )}
+              {item.type === 'kredi' && item.raw_text?.includes('Vade:') && (
                 <Pressable
-                  style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.5 : 1 }]}
                   onPress={() => {
-                    setEditingItem(item);
-                    setEditTitle(item.filename);
-                    
-                    // Eğer veritabanında tutar yoksa metinden çekmeye çalış
-                    let initialAmount = item.amount?.toString() || '';
-                    if (!initialAmount || initialAmount === '0') {
-                      const amountMatch = item.raw_text?.match(/Tutar:\s*([\d.,]+)/);
-                      if (amountMatch) initialAmount = amountMatch[1].replace(',', '.');
+                    const plan = generatePaymentPlan(item.raw_text);
+                    if (plan) {
+                      setCurrentPlan(plan);
+                      setCurrentPlanTitle(item.filename);
+                      setCurrentPlanItem(item);
+                      setPlanModalVisible(true);
+                    } else {
+                      Alert.alert('Hata', 'Ödeme planı oluşturulamadı. Veri eksik.');
                     }
-                    
-                    setEditAmount(initialAmount);
-                    setEditModalVisible(true);
                   }}
-                  hitSlop={15}
+                  style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: tabCfg.color + '22', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}
                 >
-                  <View style={[styles.actionIconBg, { backgroundColor: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.08)' }]}>
-                    <Ionicons name="create-outline" size={18} color="#6366f1" />
-                  </View>
+                  <Text style={{ color: tabCfg.color, fontSize: 11, fontWeight: '700' }}>Ödeme Planını Gör</Text>
                 </Pressable>
+              )}
+            </View>
 
-                <Pressable
-                    style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.5 : 1 }]}
-                    onPress={() => handleDelete(item.id)}
-                    hitSlop={15}
-                >
-                    <View style={[styles.actionIconBg, { backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)' }]}>
-                      <Ionicons name="trash" size={18} color="#ef4444" />
-                    </View>
-                </Pressable>
-             </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Pressable
+                style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.5 : 1 }]}
+                onPress={() => {
+                  setEditingItem(item);
+                  setEditTitle(item.filename);
+
+                  // Eğer veritabanında tutar yoksa metinden çekmeye çalış
+                  let initialAmount = item.amount?.toString() || '';
+                  if (!initialAmount || initialAmount === '0') {
+                    const amountMatch = item.raw_text?.match(/Tutar:\s*([\d.,]+)/);
+                    if (amountMatch) initialAmount = amountMatch[1].replace(',', '.');
+                  }
+
+                  setEditAmount(initialAmount);
+                  setEditModalVisible(true);
+                }}
+                hitSlop={15}
+              >
+                <View style={[styles.actionIconBg, { backgroundColor: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.08)' }]}>
+                  <Ionicons name="create-outline" size={18} color="#6366f1" />
+                </View>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.5 : 1 }]}
+                onPress={() => handleDelete(item.id)}
+                hitSlop={15}
+              >
+                <View style={[styles.actionIconBg, { backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)' }]}>
+                  <Ionicons name="trash" size={18} color="#ef4444" />
+                </View>
+              </Pressable>
+            </View>
           </View>
         </Pressable>
       </Animated.View>
@@ -469,7 +470,7 @@ export default function HomeScreen() {
           {TABS.map(tab => {
             const isActive = activeTab === tab.id;
             return (
-              <Pressable key={tab.id} onPress={() => setActiveTab(tab.id)} style={({pressed}) => [styles.tabPill, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
+              <Pressable key={tab.id} onPress={() => setActiveTab(tab.id)} style={({ pressed }) => [styles.tabPill, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
                 {isActive ? (
                   <LinearGradient
                     colors={tab.colors}
@@ -515,7 +516,7 @@ export default function HomeScreen() {
 
           const renderSubscriptionCalendar = () => {
             if (activeTab !== 'subscription') return null;
-            
+
             const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
             const currentDay = new Date().getDate();
             const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
@@ -537,7 +538,7 @@ export default function HomeScreen() {
                       <View key={day} style={{ alignItems: 'center', gap: 6 }}>
                         <View style={[
                           { width: 45, height: 65, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
-                          day === currentDay 
+                          day === currentDay
                             ? { backgroundColor: '#ec4899', borderColor: '#ec4899' }
                             : { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#fff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }
                         ]}>
@@ -565,40 +566,40 @@ export default function HomeScreen() {
                   <Pressable onPress={() => setUpcomingModalVisible(true)} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
                     <LinearGradient
                       colors={isDark ? ['#3f2c00', '#1a1200'] : ['#fef3c7', '#fef08a']}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                  style={{
-                    padding: 20,
-                    borderRadius: 24,
-                    borderWidth: 1,
-                    borderColor: isDark ? '#b45309' : '#fde047',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    shadowColor: '#d97706',
-                    shadowOffset: { width: 0, height: 8 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 16,
-                    elevation: 5
-                  }}
-                >
-                  <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(217, 119, 6, 0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
-                    <Ionicons name="warning" size={24} color="#d97706" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '900', color: isDark ? '#fcd34d' : '#92400e', marginBottom: 4 }}>
-                      Yaklaşan {upcomingItems.length} Ödeme / Bitiş
-                    </Text>
-                    <Text style={{ fontSize: 13, color: isDark ? '#fbbf24' : '#b45309', fontWeight: '600' }}>
-                      Zamanı yaklaşan {upcomingItems.length} belgeniz var. Detayları görmek için dokunun.
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={isDark ? '#fcd34d' : '#92400e'} />
-                </LinearGradient>
-              </Pressable>
-            </Animated.View>
-          )}
-        </View>
-      );
-    }}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      style={{
+                        padding: 20,
+                        borderRadius: 24,
+                        borderWidth: 1,
+                        borderColor: isDark ? '#b45309' : '#fde047',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        shadowColor: '#d97706',
+                        shadowOffset: { width: 0, height: 8 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 16,
+                        elevation: 5
+                      }}
+                    >
+                      <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(217, 119, 6, 0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
+                        <Ionicons name="warning" size={24} color="#d97706" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: isDark ? '#fcd34d' : '#92400e', marginBottom: 4 }}>
+                          Yaklaşan {upcomingItems.length} Ödeme / Bitiş
+                        </Text>
+                        <Text style={{ fontSize: 13, color: isDark ? '#fbbf24' : '#b45309', fontWeight: '600' }}>
+                          Zamanı yaklaşan {upcomingItems.length} belgeniz var. Detayları görmek için dokunun.
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color={isDark ? '#fcd34d' : '#92400e'} />
+                    </LinearGradient>
+                  </Pressable>
+                </Animated.View>
+              )}
+            </View>
+          );
+        }}
         ListEmptyComponent={
           <Animated.View style={[styles.emptyState, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
             <View style={styles.emptyIconContainer}>
@@ -616,11 +617,11 @@ export default function HomeScreen() {
       />
 
       {/* Floating Action Button (FAB) */}
-      <Pressable 
-        style={({pressed}) => [styles.fab, { transform: [{ scale: pressed ? 0.95 : 1 }] }]} 
+      <Pressable
+        style={({ pressed }) => [styles.fab, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}
         onPress={() => router.push(`/add?type=${activeTab}`)}
       >
-        <LinearGradient colors={activeTabConfig.colors} style={styles.fabGradient} start={{x:0, y:0}} end={{x:1, y:1}}>
+        <LinearGradient colors={activeTabConfig.colors} style={styles.fabGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <Ionicons name="add" size={30} color="#fff" />
         </LinearGradient>
       </Pressable>
@@ -643,21 +644,21 @@ export default function HomeScreen() {
               {/* Kredi Özeti (Ödeme Planı Üstü) */}
               {currentPlanItem?.type === 'kredi' && currentPlanItem?.raw_text && (
                 <View style={{ backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)', padding: 20, borderRadius: 24, marginBottom: 24, borderWidth: 1, borderColor: '#6366f144' }}>
-                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-                      <View>
-                         <Text style={{ color: '#6366f1', fontWeight: '900', fontSize: 10, textTransform: 'uppercase' }}>Anapara</Text>
-                         <Text style={{ color: isDark ? '#fff' : '#000', fontSize: 18, fontWeight: '900' }}>{currentPlanItem.raw_text.match(/Anapara:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
-                      </View>
-                      <View style={{ alignItems: 'flex-end' }}>
-                         <Text style={{ color: '#10b981', fontWeight: '900', fontSize: 10, textTransform: 'uppercase' }}>Toplam Geri Ödeme</Text>
-                         <Text style={{ color: isDark ? '#fff' : '#000', fontSize: 18, fontWeight: '900' }}>{currentPlanItem.raw_text.match(/Toplam Geri Ödeme:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
-                      </View>
-                   </View>
-                   <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', marginBottom: 12 }} />
-                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 12, fontWeight: '600' }}>Vade: {currentPlanItem.raw_text.match(/Vade:\s*(\d+)\s*Ay/)?.[1] || '--'} Ay</Text>
-                      <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 12, fontWeight: '600' }}>Faiz: %{currentPlanItem.raw_text.match(/Faiz Oranı:\s*%?([\d.,]+)/)?.[1] || '0,00'}</Text>
-                   </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <View>
+                      <Text style={{ color: '#6366f1', fontWeight: '900', fontSize: 10, textTransform: 'uppercase' }}>Anapara</Text>
+                      <Text style={{ color: isDark ? '#fff' : '#000', fontSize: 18, fontWeight: '900' }}>{currentPlanItem.raw_text.match(/Anapara:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ color: '#10b981', fontWeight: '900', fontSize: 10, textTransform: 'uppercase' }}>Toplam Geri Ödeme</Text>
+                      <Text style={{ color: isDark ? '#fff' : '#000', fontSize: 18, fontWeight: '900' }}>{currentPlanItem.raw_text.match(/Toplam Geri Ödeme:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
+                    </View>
+                  </View>
+                  <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', marginBottom: 12 }} />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 12, fontWeight: '600' }}>Vade: {currentPlanItem.raw_text.match(/Vade:\s*(\d+)\s*Ay/)?.[1] || '--'} Ay</Text>
+                    <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 12, fontWeight: '600' }}>Faiz: %{currentPlanItem.raw_text.match(/Faiz Oranı:\s*%?([\d.,]+)/)?.[1] || '0,00'}</Text>
+                  </View>
                 </View>
               )}
 
@@ -691,15 +692,15 @@ export default function HomeScreen() {
                 <Ionicons name="close" size={24} color={isDark ? '#a1a1aa' : '#52525b'} />
               </Pressable>
             </View>
-            
+
             <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
               <View style={{ gap: 20 }}>
                 {editingItem?.image_url && (
                   <View style={{ marginBottom: 10 }}>
                     <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Belge Görseli</Text>
-                    <Image 
-                      source={{ uri: editingItem.image_url }} 
-                      style={{ width: '100%', height: 200, borderRadius: 16 }} 
+                    <Image
+                      source={{ uri: editingItem.image_url }}
+                      style={{ width: '100%', height: 200, borderRadius: 16 }}
                       resizeMode="cover"
                     />
                   </View>
@@ -728,7 +729,7 @@ export default function HomeScreen() {
                   />
                 </View>
 
-                <Pressable 
+                <Pressable
                   onPress={handleSaveEdit}
                   style={({ pressed }) => [
                     styles.saveEditBtn,
@@ -795,19 +796,19 @@ export default function HomeScreen() {
                   <View style={{ backgroundColor: isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)', padding: 16, borderRadius: 20, marginVertical: 8 }}>
                     <Text style={{ color: '#6366f1', fontWeight: '900', fontSize: 11, textTransform: 'uppercase', marginBottom: 12 }}>Kredi Özeti</Text>
                     <View style={{ gap: 12 }}>
-                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 13, fontWeight: '600' }}>Anapara</Text>
-                          <Text style={{ color: isDark ? '#fff' : '#000', fontWeight: '800' }}>{detailItem.raw_text.match(/Anapara:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
-                       </View>
-                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 13, fontWeight: '600' }}>Aylık Taksit</Text>
-                          <Text style={{ color: '#6366f1', fontWeight: '800' }}>{detailItem.raw_text.match(/Aylık Taksit:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
-                       </View>
-                       <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
-                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 13, fontWeight: '700' }}>Toplam Geri Ödeme</Text>
-                          <Text style={{ color: '#10b981', fontWeight: '900', fontSize: 16 }}>{detailItem.raw_text.match(/Toplam Geri Ödeme:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
-                       </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 13, fontWeight: '600' }}>Anapara</Text>
+                        <Text style={{ color: isDark ? '#fff' : '#000', fontWeight: '800' }}>{detailItem.raw_text.match(/Anapara:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 13, fontWeight: '600' }}>Aylık Taksit</Text>
+                        <Text style={{ color: '#6366f1', fontWeight: '800' }}>{detailItem.raw_text.match(/Aylık Taksit:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
+                      </View>
+                      <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} />
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 13, fontWeight: '700' }}>Toplam Geri Ödeme</Text>
+                        <Text style={{ color: '#10b981', fontWeight: '900', fontSize: 16 }}>{detailItem.raw_text.match(/Toplam Geri Ödeme:\s*([\d.,]+)\s*TL/)?.[1] || '---'} TL</Text>
+                      </View>
                     </View>
                   </View>
                 )}
@@ -826,13 +827,21 @@ export default function HomeScreen() {
                 {detailItem?.image_url && (
                   <View style={{ marginTop: 24 }}>
                     <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Orijinal Belge Görseli</Text>
-                    <View style={[styles.detailTextBox, { padding: 4, overflow: 'hidden', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
-                      <Image 
-                        source={{ uri: detailItem.image_url }} 
-                        style={{ width: '100%', height: 400, borderRadius: 12 }}
-                        resizeMode="cover"
-                      />
-                    </View>
+                    <Pressable
+                      onPress={() => setIsImageFull(true)}
+                      style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+                    >
+                      <View style={[styles.detailTextBox, { padding: 4, overflow: 'hidden', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                        <Image
+                          source={{ uri: detailItem.image_url }}
+                          style={{ width: '100%', height: 400, borderRadius: 12 }}
+                          resizeMode="cover"
+                        />
+                        <View style={{ position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 20 }}>
+                          <Ionicons name="expand-outline" size={20} color="#fff" />
+                        </View>
+                      </View>
+                    </Pressable>
                   </View>
                 )}
 
@@ -856,7 +865,7 @@ export default function HomeScreen() {
                   onPress={() => {
                     const title = encodeURIComponent(`${detailItem?.filename || 'Belge'} - Hatırlatma`);
                     const details = encodeURIComponent(`Garanti Arşivi: ${getSubtitle(detailItem || {})}`);
-                    
+
                     let targetDate = new Date();
                     const rawText = detailItem?.raw_text || '';
                     const datePatterns = [
@@ -877,12 +886,12 @@ export default function HomeScreen() {
                       }
                     }
 
-                    const formatGDate = (d: Date) => d.toISOString().replace(/-|:|\.\d\d\d/g,"").split('T')[0];
+                    const formatGDate = (d: Date) => d.toISOString().replace(/-|:|\.\d\d\d/g, "").split('T')[0];
                     const dateStr = formatGDate(targetDate);
-                    const nextDayStr = formatGDate(new Date(targetDate.getTime() + 24*60*60*1000));
-                    
+                    const nextDayStr = formatGDate(new Date(targetDate.getTime() + 24 * 60 * 60 * 1000));
+
                     const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${dateStr}/${nextDayStr}`;
-                    
+
                     import('react-native').then(({ Linking }) => {
                       Linking.openURL(gCalUrl).catch(() => {
                         Alert.alert('Hata', 'Takvim açılamadı.');
@@ -909,10 +918,10 @@ export default function HomeScreen() {
         <View style={{ flex: 1, justifyContent: 'flex-end' }}>
           <BlurView intensity={isDark ? 40 : 20} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setUpcomingModalVisible(false)} />
-          <View style={{ 
-            backgroundColor: isDark ? '#18181b' : '#ffffff', 
-            borderTopLeftRadius: 32, 
-            borderTopRightRadius: 32, 
+          <View style={{
+            backgroundColor: isDark ? '#18181b' : '#ffffff',
+            borderTopLeftRadius: 32,
+            borderTopRightRadius: 32,
             maxHeight: '85%',
             minHeight: '40%',
             shadowColor: '#000',
@@ -939,7 +948,7 @@ export default function HomeScreen() {
             </View>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-              {upcomingItems.map(({item, diffDays}) => {
+              {upcomingItems.map(({ item, diffDays }) => {
                 const isUrgent = diffDays <= 3;
                 const tabConfig = TABS.find(t => t.id === item.type) || TABS[0];
 
@@ -975,7 +984,7 @@ export default function HomeScreen() {
                       <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: tabConfig.color + '20', justifyContent: 'center', alignItems: 'center' }}>
                         <Ionicons name={tabConfig.icon as any} size={20} color={tabConfig.color} />
                       </View>
-                      
+
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontSize: 17, fontWeight: '800', color: isDark ? '#ffffff' : '#18181b', marginBottom: 4 }} numberOfLines={1}>
                           {item.filename}
@@ -984,7 +993,7 @@ export default function HomeScreen() {
                           Kategori: {item.category}
                         </Text>
                       </View>
-                      
+
                       <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
                         <Text style={{ fontSize: 22, fontWeight: '900', color: isUrgent ? '#ef4444' : (isDark ? '#f4f4f5' : '#3f3f46') }}>
                           {diffDays === 0 ? 'Bugün' : `${diffDays}`}
@@ -999,6 +1008,23 @@ export default function HomeScreen() {
               })}
             </ScrollView>
           </View>
+        </View>
+      </Modal>
+      {/* Full Screen Image Modal */}
+      <Modal visible={isImageFull} transparent={true} animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' }}>
+          <Pressable
+            style={{ position: 'absolute', top: 50, right: 24, zIndex: 10, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}
+            onPress={() => setIsImageFull(false)}
+          >
+            <Ionicons name="close" size={28} color="#fff" />
+          </Pressable>
+
+          <Image
+            source={{ uri: detailItem?.image_url }}
+            style={{ width: width, height: height }}
+            resizeMode="contain"
+          />
         </View>
       </Modal>
     </LinearGradient>
