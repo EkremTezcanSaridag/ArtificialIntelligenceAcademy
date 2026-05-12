@@ -19,11 +19,12 @@
 - OCR ile metin çıkarma ve yapılandırılmış veri oluşturma (Başlık, Tutar, Tarih, Para Birimi)
 - Akıllı hata ayıklama ve JSON veri işleme mekanizması
 
-### 📊 Gelişmiş Finansal İstatistikler
-- **Dinamik Harcama Analizi** — Tüm harcamaların kategorize edilmiş görsel sunumu
-- **Özel Animasyonlu Grafikler** — `react-native-svg` ve `reanimated` ile sıfırdan yazılmış, dönerek dolan dairesel grafikler
-- **Çoklu Para Birimi Desteği** — TRY, USD, EUR ve GBP arasında anlık döviz kurlarıyla (Exchange Rate API) otomatik dönüşüm
-- **Harcama Trendleri** — Son 6 aylık harcama değişimlerini gösteren çizgi grafikler
+### 📊 Gelişmiş Finansal İstatistikler & Animasyonlar
+- **Özel SVG Animasyon Motoru** — `react-native-svg` ve `reanimated` kullanılarak sıfırdan geliştirilen, statik grafiklerin ötesinde bir görsel deneyim.
+- **Sıfırdan Çizilme Efekti (Clockwise Draw)** — Grafik dilimlerinin saat yönünde dinamik olarak dolması (`strokeDashoffset` animasyonu).
+- **Dinamik Rotasyon** — Verilerin 360 derecelik bir dönüş ve `scale` efektiyle ekrana gelmesi.
+- **Mikro-Animasyonlar** — Sayfa geçişlerinde ve etkileşimlerde kullanılan yumuşak `Fade`, `Spring` ve `Layout` animasyonları.
+- **Çoklu Para Birimi Dönüşümü** — Anlık döviz kurlarıyla TRY, USD, EUR ve GBP desteği.
 
 ### 🔔 Akıllı Hatırlatma Sistemi
 Tüm belge türleri için son tarihlere yaklaşırken bildirim alma:
