@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchInvoices } from '../src/services/api';
+import { fetchInvoices, fetchExchangeRates } from '../src/services/api';
 import { useTheme } from '../src/context/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -25,8 +25,26 @@ export default function StatsScreen() {
 
   const loadStats = async () => {
     try {
-      const invoices = await fetchInvoices();
-      setData(invoices || []);
+      const [invoices, rates] = await Promise.all([
+        fetchInvoices(),
+        fetchExchangeRates()
+      ]);
+      
+      // Verileri TRY cinsine dönüştür
+      const processedData = (invoices || []).map(item => {
+        let amountTRY = item.amount || 0;
+        if (item.currency && item.currency !== 'TRY' && rates) {
+          // rate = TRY per 1 unit of currency? No, fetchExchangeRates returns rates relative to TRY.
+          // TRY is 1.0, USD might be 0.03? 
+          // Actually, exchangerate-api.com/v4/latest/TRY returns: "USD": 0.030, "EUR": 0.028
+          // So TRY = Amount / rate
+          const rate = rates[item.currency];
+          if (rate) amountTRY = amountTRY / rate;
+        }
+        return { ...item, amountTRY };
+      });
+      
+      setData(processedData);
     } catch (error) {
       console.error("İstatistikler yüklenemedi:", error);
     } finally {
@@ -56,13 +74,13 @@ export default function StatsScreen() {
     );
   }
 
-  const totalSpent = data.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const totalSpent = data.reduce((sum, item) => sum + (item.amountTRY || 0), 0);
   
   // Kategori Dağılımı
   const categoryTotals: Record<string, number> = {};
   data.forEach(item => {
     const cat = item.category || 'Diğer';
-    categoryTotals[cat] = (categoryTotals[cat] || 0) + (item.amount || 0);
+    categoryTotals[cat] = (categoryTotals[cat] || 0) + (item.amountTRY || 0);
   });
 
   const pieData = Object.keys(categoryTotals).map(cat => ({
@@ -78,7 +96,7 @@ export default function StatsScreen() {
   data.forEach(item => {
     const date = new Date(item.created_at);
     const monthKey = monthNames[date.getMonth()];
-    monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + (item.amount || 0);
+    monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + (item.amountTRY || 0);
   });
 
   const last6Months = [];

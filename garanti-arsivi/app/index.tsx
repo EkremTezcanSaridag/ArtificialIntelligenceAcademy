@@ -16,6 +16,15 @@ import { Alert } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
+const getCurrencySymbol = (code: string) => {
+  switch (code) {
+    case 'USD': return '$';
+    case 'EUR': return '€';
+    case 'GBP': return '£';
+    default: return '₺';
+  }
+};
+
 type TabType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'kart';
 
 interface TabConfig {
@@ -88,6 +97,7 @@ export default function HomeScreen() {
           if (items.length > 0) {
             await registerForPushNotificationsAsync();
             for (const item of items) {
+              if (!item.raw_text) continue;
               const reminderMatch = item.raw_text.match(/Hatırlatma:\s*(.+)/);
               if (!reminderMatch) continue;
               const reminders = reminderMatch[1].split(',') as ReminderOption[];
@@ -333,7 +343,7 @@ export default function HomeScreen() {
                 </View>
                 {item.amount > 0 && (
                   <Text style={[styles.amountText, { color: tabCfg.color }]}>
-                    {item.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL
+                    {item.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {getCurrencySymbol(item.currency)}
                   </Text>
                 )}
                 {item.type === 'kredi' && item.raw_text?.includes('Vade:') && (
@@ -699,6 +709,17 @@ export default function HomeScreen() {
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
               {/* Info rows */}
               <View style={{ gap: 16 }}>
+                <View style={[styles.detailRow, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+                  <View style={styles.detailIconCol}>
+                    <Ionicons name="cash-outline" size={20} color="#6366f1" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailLabel}>Tutar</Text>
+                    <Text style={[styles.detailValue, { color: isDark ? '#fff' : '#000' }]}>
+                      {detailItem?.amount?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {getCurrencySymbol(detailItem?.currency)}
+                    </Text>
+                  </View>
+                </View>
                 <View style={[styles.detailRow, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
                   <View style={styles.detailIconCol}>
                     <Ionicons name="folder-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} />

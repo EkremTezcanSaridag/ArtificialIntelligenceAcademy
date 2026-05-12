@@ -33,6 +33,7 @@ export interface AnalysisResult {
   date: string;
   summary: string;
   category?: string;
+  currency?: string;
 }
 
 export interface OCRResponse {
@@ -42,8 +43,20 @@ export interface OCRResponse {
     filename: string;
     text: string;
     category: string;
+    currency: string;
   };
 }
+
+export const fetchExchangeRates = async () => {
+  try {
+    const response = await fetch('https://api.exchangerate-api.com/v4/latest/TRY');
+    const data = await response.json();
+    return data.rates; // returns rates relative to TRY
+  } catch (error) {
+    console.error("Döviz kurları alınamadı:", error);
+    return null;
+  }
+};
 
 export const uploadInvoice = async (
   uri: string, 
@@ -54,7 +67,8 @@ export const uploadInvoice = async (
   finalText: string,
   base64Image?: string | null,
   amount?: number,
-  dueDate?: string
+  dueDate?: string,
+  currency: string = 'TRY'
 ): Promise<OCRResponse> => {
   
   try {
@@ -92,6 +106,7 @@ export const uploadInvoice = async (
       category: category,
       type: documentType,
       amount: amount || null,
+      currency: currency,
       due_date: dueDate ? dueDate.split('.').reverse().join('-') : null
     };
     
@@ -175,17 +190,19 @@ export const addManualRecord = async (
   dueDate: string,
   category: string,
   type: string,
-  additionalText?: string
+  additionalText?: string,
+  currency: string = 'TRY'
 ) => {
   const { data, error } = await supabase
     .from('invoices')
     .insert([
       {
         filename: title,
-        raw_text: additionalText || `Tutar: ${amount} TL\nTarih: ${dueDate}`,
+        raw_text: additionalText || `Tutar: ${amount} ${currency}\nTarih: ${dueDate}`,
         category: category,
         type: type,
         amount: parseTurkishNumber(amount),
+        currency: currency,
         due_date: dueDate.split('.').reverse().join('-') // GG.AA.YYYY -> YYYY-AA-GG
       }
     ]);
@@ -232,21 +249,22 @@ Hata yapmamaya odaklan, özellikle tutar kısmında belgedeki EN SON/EN ALT topl
 
 Çıkarılacak Bilgiler:
 1. title: Şirket adı veya ürün adı (Örn: "Amazon Türkiye", "Türk Telekom").
-2. amount: Belgedeki EN SON ve EN BÜYÜK toplam tutar (GENEL TOPLAM). 
+2. amount: Belgedeki EN SON ve EN BÜYÜK toplam tutar. 
    TÜRKİYE SAYI FORMATI KURALLARI: 
    - VİRGÜL (,) her zaman kuruş (ondalık) ayracıdır. Örn: "1.250,50" -> "1250.50".
    - NOKTA (.) genellikle binlik ayırıcıdır ve SİLİNMELİDİR. Örn: "10.200" -> "10200.00".
-   - ÖNEMLİ: Eğer noktadan sonra 3 basamak varsa (Örn: .200, .500, .000) bu bir binlik ayırıcıdır, sakın ondalık sanma.
    - Sadece noktadan sonra TAM 2 BASAMAK varsa ve başka virgül yoksa ondalık sayabilirsin.
    - Çıktı formatı sadece sayı olmalı (Örn: "10200.00").
-3. date: Belge üzerindeki işlem tarihi veya son ödeme tarihi (Format: GG.AA.YYYY).
-4. category: Belge içeriğine göre en uygun kategori (Seçenekler: Elektronik, Mutfak, Giyim, Vergi, Fatura, Borç, Diğer).
-5. summary: Belgenin içeriğini, varsa alınan ürünlerin listesini ve hatırlatma önerisini (Örn: "1 Hafta önce hatırlatılmalı") içeren tamamen TÜRKÇE detaylı bir açıklama.
+3. currency: Belgedeki para birimi (TRY, USD, EUR, GBP). Belge üzerinde simge varsa ona göre belirle (₺=TRY, $=USD, €=EUR, £=GBP). Bulamazsan "TRY" döndür.
+4. date: Belge üzerindeki işlem tarihi (Format: GG.AA.YYYY).
+5. category: Belge içeriğine göre en uygun kategori.
+6. summary: Belgenin içeriğini, ürün listesini ve hatırlatma önerisini içeren tamamen TÜRKÇE detaylı bir açıklama.
 
-Yalnızca aşağıdaki formatta GEÇERLİ BİR JSON döndür:
+Yalnızca aşağıdaki formatta JSON döndür:
 {
   "title": "...",
   "amount": "...",
+  "currency": "...",
   "date": "...",
   "category": "...",
   "summary": "..."
@@ -282,6 +300,7 @@ ${extractedText}`;
     return {
       title: result.title || "",
       amount: result.amount || "",
+      currency: result.currency || "TRY",
       date: result.date || "",
       category: result.category || "",
       summary: result.summary || ""
