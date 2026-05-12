@@ -16,7 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 const { width } = Dimensions.get('window');
 
-type DocType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'kart';
+type DocType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'subscription';
 
 interface DocTypeConfig {
   id: DocType;
@@ -57,8 +57,8 @@ const DOC_TYPES: DocTypeConfig[] = [
     titleLabel: 'Banka / Kurum Adı', amountLabel: 'Tutar', dateLabel: 'Son Ödeme Tarihi'
   },
   {
-    id: 'kart', label: 'Kredi Kartı', icon: 'card', colors: ['#ec4899', '#db2777'], color: '#ec4899', categories: ['Bireysel Kart', 'Ticari Kart', 'Diğer'], description: 'Kredi kartı ekstre & borç',
-    titleLabel: 'Banka / Kart Adı', amountLabel: 'Güncel Borç', dateLabel: 'Son Ödeme Tarihi'
+    id: 'subscription', label: 'Abonelik', icon: 'repeat', colors: ['#ec4899', '#db2777'], color: '#ec4899', categories: ['Dijital Platform', 'Müzik', 'Yazılım / Bulut', 'Spor Salonu', 'Diğer'], description: 'Düzenli ödeme & abonelik',
+    titleLabel: 'Hizmet / Platform Adı', amountLabel: 'Aylık Ücret', dateLabel: 'Yenileme Tarihi'
   }
 ];
 
@@ -161,7 +161,6 @@ export default function AddScreen() {
   const getDynamicTitleLabel = () => {
     if (selectedDocType.id === 'kredi') {
       if (selectedCategory === 'Elden Borç') return 'Kişi Adı / Borçlu';
-      if (selectedCategory === 'Kredi Kartı') return 'Banka / Kart Adı';
       if (selectedCategory === 'KYK Kredisi') return 'Öğrenim Kredisi / Kurum';
       return 'Banka Adı';
     }
@@ -176,7 +175,6 @@ export default function AddScreen() {
 
   const getDynamicAmountLabel = () => {
     if (selectedDocType.id === 'kredi') {
-      if (selectedCategory === 'Kredi Kartı') return 'Güncel Borç';
       if (selectedCategory === 'Elden Borç') return 'Verilen / Alınan Tutar';
       if (selectedCategory === 'KYK Kredisi') return 'Aylık Ödeme Tutarı';
       return 'Aylık Taksit Tutarı';
@@ -746,6 +744,7 @@ const styles = StyleSheet.create({
   formContainer: { flex: 1, width: '100%' },
   inputLabel: { color: '#a1a1aa', fontSize: 13, marginBottom: 8, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
   inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, height: 56, marginBottom: 24, width: '100%', maxWidth: '100%', overflow: 'hidden', flexShrink: 1 },
+  buttonIcon: { marginRight: 8 },
   inputIcon: { marginRight: 12 },
   input: { flex: 1, fontSize: 16, fontWeight: '500', height: '100%' },
   buttonContainer: { flexDirection: 'row', width: '100%', marginBottom: 32 },

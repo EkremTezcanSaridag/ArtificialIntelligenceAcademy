@@ -25,7 +25,7 @@ const getCurrencySymbol = (code: string) => {
   }
 };
 
-type TabType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'kart';
+type TabType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'subscription';
 
 interface TabConfig {
   id: TabType;
@@ -42,8 +42,8 @@ const TABS: TabConfig[] = [
   { id: 'mtv',       label: 'MTV',                shortLabel: 'MTV',              icon: 'car-sport',        color: '#f59e0b', colors: ['#f59e0b', '#d97706'] },
   { id: 'konut',     label: 'Konut Vergisi',      shortLabel: 'konut vergisi',    icon: 'home',             color: '#10b981', colors: ['#10b981', '#059669'] },
   { id: 'kontrat',   label: 'Kontratlarım',       shortLabel: 'kontrat',          icon: 'document-text',    color: '#8b5cf6', colors: ['#8b5cf6', '#7c3aed'] },
-  { id: 'kredi',     label: 'Borçlarım',          shortLabel: 'borç',             icon: 'wallet',           color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
-  { id: 'kart',      label: 'Kartlarım',          shortLabel: 'kart',             icon: 'card',             color: '#ec4899', colors: ['#ec4899', '#db2777'] },
+  { id: 'kredi',     label: 'Borç Takibi',       shortLabel: 'borç',            icon: 'wallet',           color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
+  { id: 'subscription', label: 'Aboneliklerim',  shortLabel: 'abonelik',       icon: 'repeat',           color: '#ec4899', colors: ['#ec4899', '#db2777'] }
 ];
 
 export default function HomeScreen() {
@@ -110,6 +110,7 @@ export default function HomeScreen() {
                 /Satın Alma Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
                 /Taksit Ödeme Günü:\s*(\d{2})\.(\d{2})\.(\d{4})/,
                 /Geri Ödeme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+                /Yenileme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
               ];
               let targetDate: Date | null = null;
               for (const pattern of datePatterns) {
@@ -213,6 +214,7 @@ export default function HomeScreen() {
       /Satın Alma Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
       /Taksit Ödeme Günü:\s*(\d{2})\.(\d{2})\.(\d{4})/,
       /Geri Ödeme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
+      /Yenileme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/,
     ];
     let targetDate = null;
     if (w.due_date) {
@@ -509,13 +511,60 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={activeTabConfig.color} />}
         ListHeaderComponent={() => {
-          if (loading || upcomingItems.length === 0) return null;
+          if (loading) return null;
+
+          const renderSubscriptionCalendar = () => {
+            if (activeTab !== 'subscription') return null;
+            
+            const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+            const currentDay = new Date().getDate();
+            const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+            return (
+              <View style={{ marginBottom: 24 }}>
+                <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#000', marginLeft: 0 }]}>Ödeme Takvimi</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 10 }}>
+                  {days.map(day => {
+                    const hasPayment = warranties.some(w => {
+                      if (w.type !== 'subscription') return false;
+                      const d = w.due_date ? new Date(w.due_date) : null;
+                      if (d) return d.getDate() === day;
+                      const match = w.raw_text?.match(/Yenileme Tarihi:\s*(\d{2})\.(\d{2})\.(\d{4})/);
+                      return match && parseInt(match[1]) === day;
+                    });
+
+                    return (
+                      <View key={day} style={{ alignItems: 'center', gap: 6 }}>
+                        <View style={[
+                          { width: 45, height: 65, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
+                          day === currentDay 
+                            ? { backgroundColor: '#ec4899', borderColor: '#ec4899' }
+                            : { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#fff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }
+                        ]}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: day === currentDay ? '#fff' : '#71717a' }}>
+                            {['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'][new Date(new Date().getFullYear(), new Date().getMonth(), day).getDay()]}
+                          </Text>
+                          <Text style={{ fontSize: 18, fontWeight: '900', color: day === currentDay ? '#fff' : (isDark ? '#fff' : '#000') }}>
+                            {day}
+                          </Text>
+                        </View>
+                        {hasPayment && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#ec4899' }} />}
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            );
+          };
 
           return (
-            <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], marginBottom: 20 }}>
-              <Pressable onPress={() => setUpcomingModalVisible(true)} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
-                <LinearGradient
-                  colors={isDark ? ['#3f2c00', '#1a1200'] : ['#fef3c7', '#fef08a']}
+            <View>
+              {renderSubscriptionCalendar()}
+              {upcomingItems.length > 0 && (
+                <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], marginBottom: 20 }}>
+                  <Pressable onPress={() => setUpcomingModalVisible(true)} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+                    <LinearGradient
+                      colors={isDark ? ['#3f2c00', '#1a1200'] : ['#fef3c7', '#fef08a']}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   style={{
                     padding: 20,
@@ -546,8 +595,10 @@ export default function HomeScreen() {
                 </LinearGradient>
               </Pressable>
             </Animated.View>
-          );
-        }}
+          )}
+        </View>
+      );
+    }}
         ListEmptyComponent={
           <Animated.View style={[styles.emptyState, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
             <View style={styles.emptyIconContainer}>
@@ -1032,4 +1083,5 @@ const styles = StyleSheet.create({
   detailValue: { fontSize: 16, fontWeight: '800', marginTop: 2 },
   detailTextBox: { padding: 16, borderRadius: 16, borderWidth: 1 },
   detailRawText: { fontSize: 14, fontWeight: '500', lineHeight: 22 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', marginBottom: 16, marginTop: 8 },
 });
