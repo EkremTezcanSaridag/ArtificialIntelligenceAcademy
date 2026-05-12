@@ -1,107 +1,77 @@
-# Dijital Arşiv 📂
+<div align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=40&pause=1000&color=6366F1&center=true&vCenter=true&width=500&lines=D%C4%B0J%C4%B0TAL+AR%C5%9E%C4%B0V;Yapay+Zeka+Destekli;Ak%C4%B1ll%C4%B1+Belge+Y%C3%B6netimi" alt="Typing SVG" />
 
-**Dijital Arşiv**, belgelerinizi yapay zeka destekli OCR teknolojisiyle tarayıp dijital ortamda güvenle saklayan, hatırlatma bildirimleriyle son tarihleri asla kaçırmamanızı sağlayan kapsamlı bir mobil uygulamadır.
+  <p align="center">
+    <b>Belgelerinizi Yapay Zeka ile Geleceğe Taşıyın</b><br />
+    <i>Harcamalarınızı Analiz Edin, Garanti Sürelerini Takip Edin, Hiçbir Tarihi Kaçırmayın.</i>
+  </p>
 
-## ✨ Özellikler
+  <p align="center">
+    <img src="https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
+    <img src="https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white" />
+    <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" />
+    <img src="https://img.shields.io/badge/Groq_AI-F59E0B?style=for-the-badge&logo=google-cloud&logoColor=white" />
+  </p>
+</div>
 
-### 📋 Belge Yönetimi
-- **Garanti Belgelerim** — Ürün garanti belgelerini saklayın, kategori ve süre bilgisiyle takip edin
-- **Faturalar** — Elektrik, su, doğal gaz, internet faturalarınızı arşivleyin
-- **MTV (Motorlu Taşıt Vergisi)** — Araç vergilerinizi kayıt altına alın
-- **Konut Vergisi** — Emlak vergisi, DASK, tapu harcı belgelerinizi yönetin
-- **Kontratlarım** — Kira sözleşmeleri, iş sözleşmeleri ve kontratları saklayın
-- **Borçlarım** — Kredi, KYK, elden borç ve taksit takibi yapın (ödeme planı görüntüleme dahil)
+---
 
-### 🎨 Dinamik ve Akıcı Arayüz (Animasyonlar)
-- **Özel SVG Animasyonları** — Grafiklerin sıfırdan saat yönünde dolma efekti (`strokeDashoffset`)
-- **360° Rotasyonel Giriş** — İstatistiklerin dönerken büyüme (scale) animasyonuyla gelmesi
-- **Gelişmiş Mikro-Etkileşimler** — `react-native-reanimated` ile güçlendirilmiş yumuşak sayfa geçişleri
-- **Karanlık/Aydınlık Mod** — Temalar arası pürüzsüz görsel geçişler
+## 🚀 Öne Çıkan Özellikler
 
-### 📊 Gelişmiş Finansal İstatistikler
-- **Dinamik Harcama Analizi** — Tüm harcamaların kategorize edilmiş görsel sunumu
-- **Çoklu Para Birimi Desteği** — TRY, USD, EUR ve GBP arasında anlık döviz kurlarıyla otomatik dönüşüm
-- **Harcama Trendleri** — Son 6 aylık harcama değişimlerini gösteren interaktif grafikler
+### 🤖 Yapay Zeka (AI) Gücü
+- **Llama 4 Scout Integration**: En güncel vision modeli ile belgeleri saniyeler içinde okur.
+- **Otomatik Veri Ayrıştırma**: Fatura tutarı, tarih ve kategorileri kendisi bulur.
+- **Hata Ayıklama**: Bozuk veya düşük kaliteli görsellerden maksimum veri çıkarımı.
 
-### 🔔 Akıllı Hatırlatma Sistemi
-Tüm belge türleri için son tarihlere yaklaşırken bildirim alma:
-- **1 Hafta Kala** — Son tarihten 7 gün önce
-- **2 Hafta Kala** — Son tarihten 14 gün önce
-- **3 Hafta Kala** — Son tarihten 21 gün önce
-- **1 Ay Kala** — Son tarihten 30 gün önce
-- **2 Ay Kala** — Son tarihten 60 gün önce
-- **3 Ay Kala** — Son tarihten 90 gün önce
+### 📊 Animasyonlu Analiz Paneli
+- **Custom SVG Engine**: `Reanimated` ile sıfırdan çizilen, dönerek dolan dairesel grafikler.
+- **Canlı Döviz Kurları**: Harcamalarınızı anlık kurlarla TRY, USD, EUR veya GBP cinsinden görün.
+- **Trend Takibi**: Son 6 aylık harcama alışkanlıklarınızın görsel özeti.
 
-> Birden fazla hatırlatma seçeneği aynı anda seçilebilir (çoklu seçim).
+### 🔔 Akıllı Bildirim Sistemi
+- Belgelerinizin süresi dolmadan **1 hafta, 2 hafta veya 1 ay önce** size haber verir.
+- Çoklu seçim desteğiyle farklı zamanlarda hatırlatıcı kurma imkanı.
 
-### 🌗 Karanlık / Aydınlık Mod
-- Tek tuşla tema değişimi (sağ üst köşedeki ay/güneş ikonu)
-- Tüm sayfalarda tutarlı tema desteği
+### 🌗 Premium UI/UX
+- **Karanlık Mod**: Göz yormayan şık bir gece arayüzü.
+- **Modern Tasarım**: Glassmorphism efektleri ve yumuşak geçiş animasyonları.
+
+---
 
 ## 🛠️ Teknoloji Yığını
 
-| Katman | Teknoloji |
-|--------|-----------|
-| **Frontend** | React Native + Expo |
-| **Animasyon Motoru** | **React Native Reanimated (v4)** |
-| **Vektörel Grafikler** | **React Native SVG (Custom Drawing)** |
-| **Navigasyon** | Expo Router (file-based routing) |
-| **UI Bileşenleri** | Ionicons, Linear Gradient, Blur View |
-| **Yapay Zeka** | Groq Cloud API (Llama 4 Scout 17B) |
-| **Veritabanı** | Supabase (PostgreSQL + Storage) |
-| **Döviz Kurları** | Exchange Rate API |
-| **Bildirimler** | expo-notifications |
+| Katman | Teknoloji | Rozet |
+|--------|-----------|-------|
+| **Frontend** | React Native (Expo) | ![React Native](https://img.shields.io/badge/-React_Native-61DAFB?style=flat-square&logo=react&logoColor=black) |
+| **Yapay Zeka** | Llama 4 Scout (Groq) | ![AI](https://img.shields.io/badge/-AI_Llama4-orange?style=flat-square&logo=probot) |
+| **Veritabanı** | Supabase | ![Supabase](https://img.shields.io/badge/-Supabase-3ECF8E?style=flat-square&logo=supabase) |
+| **Animasyon** | Reanimated v4 | ![Reanimated](https://img.shields.io/badge/-Reanimated-blue?style=flat-square&logo=react) |
+| **Grafik** | React Native SVG | ![SVG](https://img.shields.io/badge/-SVG_Drawing-red?style=flat-square&logo=svg) |
 
-## 🚀 Kurulum
-
-### 1. Bağımlılıkları Yükleyin
-
-```bash
-cd garanti-arsivi
-npm install
-```
-
-### 2. Çevresel Değişkenleri Ayarlayın
-`.env` dosyasını oluşturun ve aşağıdaki anahtarları ekleyin:
-```env
-EXPO_PUBLIC_SUPABASE_URL=your_url
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_key
-EXPO_PUBLIC_GROQ_API_KEY=your_groq_key
-```
-
-### 3. Uygulamayı Başlatın
-
-```bash
-cd garanti-arsivi
-npx expo start
-```
-
-Expo Go uygulaması ile QR kodu tarayarak mobil cihazınızda test edebilirsiniz.
+---
 
 ## 📁 Proje Yapısı
 
-```
+```bash
 GarantiArsiviApp/
 ├── garanti-arsivi/
-│   ├── app/
-│   │   ├── _layout.tsx      # Tab navigasyonu & tema ayarları
-│   │   ├── index.tsx        # Ana sayfa (tüm sekmeler & belgeler)
-│   │   ├── add.tsx          # Yeni kayıt ekleme (AI OCR & manuel)
-│   │   └── stats.tsx        # Finansal analiz & animasyonlu grafikler
+│   ├── app/                 # Expo Router Sayfaları
+│   │   ├── stats.tsx        # 📈 Analiz & Animasyonlu Grafik
+│   │   ├── add.tsx          # ➕ AI Destekli Belge Ekleme
+│   │   └── index.tsx        # 🏠 Ana Arşiv Listesi
 │   ├── src/
-│   │   ├── context/
-│   │   │   └── ThemeContext.tsx  # Karanlık/aydınlık tema yönetimi
-│   │   └── services/
-│   │       ├── api.ts           # Supabase & Groq AI servisleri
-│   │       └── notifications.ts # Bildirim zamanlama sistemi
-│   └── assets/              # Uygulama ikonları ve görselleri
-└── README.md
+│   │   ├── services/
+│   │   │   ├── api.ts       # 🧠 AI & DB Entegrasyonu
+│   │   │   └── notifications.ts # 🔔 Bildirim Motoru
 ```
 
-## 👥 Katkıda Bulunanlar
-
-Bu proje **Artificial Intelligence Academy** kapsamında geliştirilmektedir.
+---
 
 ## 📄 Lisans
 
-Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
+Bu proje **MIT Lisansı** altında lisanslanmıştır.  
+© 2026 **Ekrem Tezcan Sarıdag & Elif Kaner**
+
+<div align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=100&section=footer" />
+</div>
