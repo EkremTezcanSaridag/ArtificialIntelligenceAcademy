@@ -13,10 +13,17 @@
 - **Borçlarım** — Kredi, KYK, elden borç ve taksit takibi yapın (ödeme planı görüntüleme dahil)
 
 
-### 🤖 Yapay Zeka ile OCR
+### 🤖 Yapay Zeka ile OCR & Analiz
+- **Groq Llama 4 Scout Integration** — En güncel çok modlu (multimodal) yapay zeka modeli ile yüksek doğrulukta belge tarama
 - Fotoğraf çekerek veya galeriden seçerek belgeleri otomatik taratma
-- OCR ile metin çıkarma ve yapılandırılmış veri oluşturma
-- FastAPI + Pytesseract tabanlı backend
+- OCR ile metin çıkarma ve yapılandırılmış veri oluşturma (Başlık, Tutar, Tarih, Para Birimi)
+- Akıllı hata ayıklama ve JSON veri işleme mekanizması
+
+### 📊 Gelişmiş Finansal İstatistikler
+- **Dinamik Harcama Analizi** — Tüm harcamaların kategorize edilmiş görsel sunumu
+- **Özel Animasyonlu Grafikler** — `react-native-svg` ve `reanimated` ile sıfırdan yazılmış, dönerek dolan dairesel grafikler
+- **Çoklu Para Birimi Desteği** — TRY, USD, EUR ve GBP arasında anlık döviz kurlarıyla (Exchange Rate API) otomatik dönüşüm
+- **Harcama Trendleri** — Son 6 aylık harcama değişimlerini gösteren çizgi grafikler
 
 ### 🔔 Akıllı Hatırlatma Sistemi
 Tüm belge türleri için son tarihlere yaklaşırken bildirim alma:
@@ -45,11 +52,12 @@ Tüm belge türleri için son tarihlere yaklaşırken bildirim alma:
 |--------|-----------|
 | **Frontend** | React Native + Expo |
 | **Navigasyon** | Expo Router (file-based routing) |
-| **UI** | expo-linear-gradient, expo-blur, Ionicons |
-| **Backend** | FastAPI + Pytesseract (OCR) |
-| **Veritabanı** | Supabase |
+| **UI** | Lucide Icons, Ionicons, SVG Animations |
+| **Yapay Zeka** | Groq Cloud API (Llama 4 Scout 17B) |
+| **Veritabanı** | Supabase (PostgreSQL + Storage) |
+| **Döviz Kurları** | Exchange Rate API |
+| **Animasyonlar** | React Native Reanimated (Keyframes & Layout Animations) |
 | **Bildirimler** | expo-notifications |
-| **State** | React useState + Context API (tema) |
 
 ## 🚀 Kurulum
 
@@ -60,12 +68,12 @@ cd garanti-arsivi
 npm install
 ```
 
-### 2. Backend'i Başlatın
-
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000
+### 2. Çevresel Değişkenleri Ayarlayın
+`.env` dosyasını oluşturun ve aşağıdaki anahtarları ekleyin:
+```env
+EXPO_PUBLIC_SUPABASE_URL=your_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_key
+EXPO_PUBLIC_GROQ_API_KEY=your_groq_key
 ```
 
 ### 3. Uygulamayı Başlatın
@@ -80,20 +88,18 @@ Expo Go uygulaması ile QR kodu tarayarak mobil cihazınızda test edebilirsiniz
 ## 📁 Proje Yapısı
 
 ```
-ArtificialIntelligenceAcademy/
-├── backend/
-│   └── main.py              # FastAPI + OCR backend
+GarantiArsiviApp/
 ├── garanti-arsivi/
 │   ├── app/
 │   │   ├── _layout.tsx      # Tab navigasyonu & tema ayarları
 │   │   ├── index.tsx        # Ana sayfa (tüm sekmeler & belgeler)
-│   │   └── add.tsx          # Yeni kayıt ekleme (OCR & manuel)
-
+│   │   ├── add.tsx          # Yeni kayıt ekleme (AI OCR & manuel)
+│   │   └── stats.tsx        # Finansal analiz & animasyonlu grafikler
 │   ├── src/
 │   │   ├── context/
 │   │   │   └── ThemeContext.tsx  # Karanlık/aydınlık tema yönetimi
 │   │   └── services/
-│   │       ├── api.ts           # Supabase API servisleri
+│   │       ├── api.ts           # Supabase & Groq AI servisleri
 │   │       └── notifications.ts # Bildirim zamanlama sistemi
 │   └── assets/              # Uygulama ikonları ve görselleri
 └── README.md
@@ -105,4 +111,4 @@ Bu proje **Artificial Intelligence Academy** kapsamında geliştirilmektedir.
 
 ## 📄 Lisans
 
-Bu proje eğitim amaçlı geliştirilmiştir.
+Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
