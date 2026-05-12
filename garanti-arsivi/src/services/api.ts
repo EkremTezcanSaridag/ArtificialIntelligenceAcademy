@@ -4,10 +4,10 @@ import { createClient } from '@supabase/supabase-js';
 import { decode } from 'base64-arraybuffer';
 
 // Sizin Yeni Supabase Bilgileriniz
-const SUPABASE_URL = 'https://xdomyuvycsvqttzkqqno.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_ehmc2VEj97HvFBe6l2GIcA_qng5Uxqt';
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
+const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_KEY || 'your-anon-key';
 const GROQ_API_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY;
-const OCR_API_KEY = 'K84237148488957'; 
+const OCR_API_KEY = process.env.EXPO_PUBLIC_OCR_API_KEY || 'K84237148488957'; 
 
 const isNode = typeof process !== 'undefined' && process.versions != null && process.versions.node != null;
 
@@ -50,104 +50,42 @@ export const uploadInvoice = async (
   filename: string, 
   mimeType: string, 
   category: string,
-  documentType: 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' = 'warranty',
-  additionalText?: string,
-  base64Image?: string,
+  documentType: 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'kart' = 'warranty',
+  finalText: string,
+  base64Image?: string | null,
   amount?: number,
   dueDate?: string
 ): Promise<OCRResponse> => {
   
   try {
-    console.log("1. OCR.space üzerinden metin okunuyor...");
-    const formData = new FormData();
-    if (Platform.OS === 'web') {
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        formData.append('file', blob, filename);
-    } else {
-        formData.append('file', { uri, name: filename, type: mimeType } as any);
-    }
-    formData.append('apikey', OCR_API_KEY);
-    formData.append('language', 'tur');
-    formData.append('isOverlayRequired', 'false');
-    formData.append('filetype', 'JPG'); 
-
-    const ocrResponse = await fetch('https://api.ocr.space/parse/image', {
-      method: 'POST',
-      body: formData,
-    });
-    const ocrData = await ocrResponse.json();
-
-    if (ocrData.OCRExitCode !== 1) {
-      throw new Error('OCR Hatası: Metin okunamadı.');
-    }
-    const extractedText = ocrData.ParsedResults[0].ParsedText;
-
-    console.log("2. Groq Yapay Zekası ile metin düzeltiliyor...");
-    const groqPrompt = `Sen bir belge analiz uzmanısın. Aşağıdaki OCR metnini incele ve belgenin türüne göre (Fatura, Garanti, Sözleşme vb.) en kritik bilgileri hatasız çıkar.
-Özellikle şu kurallara dikkat et:
-1. TUTAR: Belgedeki "GENEL TOPLAM" veya "ÖDENECEK TUTAR" kısmını bul. Sadece sayısal değer döndür.
-2. TARİH: Belge üzerindeki en güncel/geçerli tarihi (Fatura tarihi, Bitiş tarihi vb.) GG.AA.YYYY formatında belirle.
-3. DETAY: Belgede ne satın alındığını, kurum adını ve varsa taksit bilgilerini içeren profesyonel bir özet yaz.
-
-Şablon:
-Bitiş Tarihi: GG.AA.YYYY (Veya: 'Satın Alma Tarihi: GG.AA.YYYY', 'Son Ödeme Tarihi: GG.AA.YYYY')
-Tutar: 1500 (Para birimi olmadan sadece sayı)
-Vade: 6 (Varsa taksit sayısı)
-Hatırlatma: 1 Hafta (Önerilen hatırlatma süresi: 1 Gün, 1 Hafta, 1 Ay vb.)
-Özet: Kurum adı ve alınan ürünlerin/hizmetlerin detaylı listesini içeren tamamen TÜRKÇE bir açıklama.
-
-OCR Metni:
-${extractedText}`;
-
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [{ role: "user", content: groqPrompt }],
-        temperature: 0.1,
-        max_tokens: 512
-      })
-    });
-
-    let finalText = extractedText;
-    if (groqResponse.ok) {
-      const groqData = await groqResponse.json();
-      const aiSummary = groqData.choices[0].message.content;
-      finalText = additionalText ? `${additionalText}\n\n--- YAPAY ZEKA ÖZETİ ---\n${aiSummary}` : `--- YAPAY ZEKA ÖZETİ ---\n${aiSummary}`;
-    } else {
-      console.warn("Groq başarısız, orijinal OCR metni kullanılıyor.");
-      finalText = additionalText ? `${additionalText}\n\n--- OCR METNİ ---\n${extractedText}` : extractedText;
-    }
-
-    console.log("3. Orijinal fotoğraf buluta (Supabase Storage) yükleniyor...");
+    console.log("1. Fotoğraf buluta (Supabase Storage) yükleniyor...");
     let imageUrl = null;
-    try {
-      const fileExt = uri.split('.').pop() || 'jpg';
-      const uniqueFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-      
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from('invoices')
-        .upload(uniqueFileName, decode(base64Image), {
-          contentType: mimeType || 'image/jpeg',
-          upsert: false
-        });
+    
+    if (base64Image) {
+      try {
+        const fileExt = uri.split('.').pop() || 'jpg';
+        const uniqueFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
         
-      if (!storageError) {
-        const { data: publicUrlData } = supabase.storage.from('invoices').getPublicUrl(uniqueFileName);
-        imageUrl = publicUrlData.publicUrl;
-        console.log("✅ Fotoğraf başarıyla yüklendi:", imageUrl);
-      } else {
-        console.warn("Fotoğraf yükleme hatası (Bucket oluşturulmamış veya yetki sorunu olabilir):", storageError.message);
+        const { error: storageError } = await supabase.storage
+          .from('invoices')
+          .upload(uniqueFileName, decode(base64Image), {
+            contentType: mimeType || 'image/jpeg',
+            upsert: false
+          });
+          
+        if (!storageError) {
+          const { data: publicUrlData } = supabase.storage.from('invoices').getPublicUrl(uniqueFileName);
+          imageUrl = publicUrlData.publicUrl;
+          console.log("✅ Fotoğraf başarıyla yüklendi:", imageUrl);
+        } else {
+          console.warn("Fotoğraf yükleme hatası:", storageError.message);
+        }
+      } catch (e) {
+        console.warn("Fotoğraf yükleme sırasında hata oluştu:", e);
       }
-    } catch (e) {
-      console.warn("Fotoğraf yükleme sırasında bir hata oluştu:", e);
     }
 
+    console.log("2. Veritabanına kaydediliyor...");
     const insertPayload: any = {
       filename: filename,
       raw_text: finalText,
@@ -157,7 +95,6 @@ ${extractedText}`;
       due_date: dueDate ? dueDate.split('.').reverse().join('-') : null
     };
     
-    // Eğer fotoğraf başarıyla yüklendiyse public URL'ini DB'ye kaydet
     if (imageUrl) {
       insertPayload.image_url = imageUrl;
     }
@@ -170,11 +107,11 @@ ${extractedText}`;
 
     return {
       status: "success",
-      message: "Belge başarıyla analiz edildi, fotoğraf buluta kaydedildi.",
+      message: "Belge başarıyla kaydedildi.",
       data: { filename, text: finalText, category }
     };
   } catch (error: any) {
-    console.error("Hata:", error);
+    console.error("Kaydetme Hatası:", error);
     throw error;
   }
 };
@@ -223,6 +160,15 @@ export const updateInvoiceDetails = async (id: string, updates: {
   return true;
 };
 
+export const parseTurkishNumber = (val: any): number => {
+  if (typeof val === 'number') return val;
+  if (!val || typeof val !== 'string') return 0;
+  // Binlik ayırıcı olan noktaları sil, ondalık ayırıcı olan virgülü noktaya çevir
+  const cleaned = val.replace(/\./g, '').replace(',', '.');
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 export const addManualRecord = async (
   title: string,
   amount: string,
@@ -239,7 +185,7 @@ export const addManualRecord = async (
         raw_text: additionalText || `Tutar: ${amount} TL\nTarih: ${dueDate}`,
         category: category,
         type: type,
-        amount: parseFloat(amount) || 0,
+        amount: parseTurkishNumber(amount),
         due_date: dueDate.split('.').reverse().join('-') // GG.AA.YYYY -> YYYY-AA-GG
       }
     ]);

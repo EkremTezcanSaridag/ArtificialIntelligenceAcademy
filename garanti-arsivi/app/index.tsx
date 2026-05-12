@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, router } from 'expo-router';
-import { fetchInvoices, deleteInvoice, updateInvoiceDetails } from '../src/services/api';
+import { fetchInvoices, deleteInvoice, updateInvoiceDetails, parseTurkishNumber } from '../src/services/api';
 import { registerForPushNotificationsAsync, scheduleReminderNotification } from '../src/services/notifications';
 import type { ReminderOption } from '../src/services/notifications';
 import { BlurView } from 'expo-blur';
@@ -16,7 +16,7 @@ import { Alert } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-type TabType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi';
+type TabType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'kart';
 
 interface TabConfig {
   id: TabType;
@@ -34,6 +34,7 @@ const TABS: TabConfig[] = [
   { id: 'konut',     label: 'Konut Vergisi',      shortLabel: 'konut vergisi',    icon: 'home',             color: '#10b981', colors: ['#10b981', '#059669'] },
   { id: 'kontrat',   label: 'Kontratlarım',       shortLabel: 'kontrat',          icon: 'document-text',    color: '#8b5cf6', colors: ['#8b5cf6', '#7c3aed'] },
   { id: 'kredi',     label: 'Borçlarım',          shortLabel: 'borç',             icon: 'wallet',           color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
+  { id: 'kart',      label: 'Kartlarım',          shortLabel: 'kart',             icon: 'card',             color: '#ec4899', colors: ['#ec4899', '#db2777'] },
 ];
 
 export default function HomeScreen() {
@@ -50,6 +51,7 @@ export default function HomeScreen() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editAmount, setEditAmount] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const { isDark, toggleTheme } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -165,11 +167,11 @@ export default function HomeScreen() {
     try {
       await updateInvoiceDetails(editingItem.id, {
         filename: editTitle,
-        amount: parseFloat(editAmount) || 0,
+        amount: parseTurkishNumber(editAmount),
       });
       setWarranties(prev => prev.map(item => 
         item.id === editingItem.id 
-          ? { ...item, filename: editTitle, amount: parseFloat(editAmount) || 0 } 
+          ? { ...item, filename: editTitle, amount: parseTurkishNumber(editAmount) } 
           : item
       ));
       setEditModalVisible(false);
@@ -180,8 +182,13 @@ export default function HomeScreen() {
   };
 
   const filteredData = warranties.filter(item => {
-    if (activeTab === 'warranty') return item.type === 'warranty' || !item.type;
-    return item.type === activeTab;
+    const matchesTab = searchQuery.length > 0 
+      ? true 
+      : (activeTab === 'warranty' ? (item.type === 'warranty' || !item.type) : item.type === activeTab);
+      
+    const matchesSearch = (item.filename || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (item.category || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
   });
 
   const activeTabConfig = TABS.find(t => t.id === activeTab) || TABS[0];
@@ -429,6 +436,23 @@ export default function HomeScreen() {
       </Animated.View>
 
       <View style={styles.tabWrapper}>
+        {/* Arama Çubuğu */}
+        <BlurView intensity={isDark ? 20 : 40} tint={isDark ? "dark" : "light"} style={styles.searchWrapper}>
+          <Ionicons name="search" size={20} color={isDark ? '#71717a' : '#a1a1aa'} style={{ marginRight: 12 }} />
+          <TextInput
+            style={[styles.searchInput, { color: isDark ? '#fff' : '#000' }]}
+            placeholder="İsim veya kategori ara..."
+            placeholderTextColor={isDark ? '#52525b' : '#a1a1aa'}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color={isDark ? '#71717a' : '#a1a1aa'} />
+            </Pressable>
+          )}
+        </BlurView>
+
         <View style={styles.tabGridContent}>
           {TABS.map(tab => {
             const isActive = activeTab === tab.id;
@@ -911,11 +935,13 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  ambientLight: { position: 'absolute', top: -100, right: -100, width: 300, height: 300, borderRadius: 150, blurRadius: 50 },
+  ambientLight: { position: 'absolute', top: -100, right: -100, width: 300, height: 300, borderRadius: 150, opacity: 0.5 },
   pageHeader: { paddingHorizontal: 24, paddingTop: Platform.OS === 'ios' ? 60 : 50, paddingBottom: 20, zIndex: 10 },
   pageTitle: { fontSize: 42, fontWeight: '900', marginBottom: 6, letterSpacing: -1.5, textAlign: 'left' },
   pageDescription: { color: '#a1a1aa', fontSize: 15, fontWeight: '500', lineHeight: 22, textAlign: 'left' },
   tabWrapper: { paddingHorizontal: 24, zIndex: 10, marginBottom: 16 },
+  searchWrapper: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 50, borderRadius: 15, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(99,102,241,0.1)' },
+  searchInput: { flex: 1, fontSize: 15, fontWeight: '600' },
   tabGridContent: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tabPill: { borderRadius: 24, overflow: 'hidden' },
   tabGradientActive: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 24, gap: 8, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },

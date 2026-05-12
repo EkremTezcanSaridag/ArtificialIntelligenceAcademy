@@ -5,7 +5,7 @@ import {
 import { useState, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { uploadInvoice, addManualRecord, analyzeDocument } from '../src/services/api';
+import { uploadInvoice, addManualRecord, analyzeDocument, parseTurkishNumber } from '../src/services/api';
 import { registerForPushNotificationsAsync, scheduleReminderNotification } from '../src/services/notifications';
 import type { ReminderOption } from '../src/services/notifications';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -55,6 +55,10 @@ const DOC_TYPES: DocTypeConfig[] = [
   {
     id: 'kredi', label: 'Borçlarım', icon: 'wallet', colors: ['#ef4444', '#dc2626'], color: '#ef4444', categories: ['Konut Kredisi', 'Taşıt Kredisi', 'İhtiyaç Kredisi', 'KYK Kredisi', 'Elden Borç', 'Diğer'], description: 'Kredi & borç belgesi',
     titleLabel: 'Banka / Kurum Adı', amountLabel: 'Tutar (TL)', dateLabel: 'Son Ödeme Tarihi'
+  },
+  {
+    id: 'kart', label: 'Kredi Kartı', icon: 'card', colors: ['#ec4899', '#db2777'], color: '#ec4899', categories: ['Bireysel Kart', 'Ticari Kart', 'Diğer'], description: 'Kredi kartı ekstre & borç',
+    titleLabel: 'Banka / Kart Adı', amountLabel: 'Güncel Borç (TL)', dateLabel: 'Son Ödeme Tarihi'
   }
 ];
 
@@ -302,18 +306,18 @@ export default function AddScreen() {
 
       if (image && base64Image) {
         const filename = title ? `${title}` : (image.split('/').pop() || 'belge.jpg');
+        const finalText = result ? `${additionalText}\n\n--- YAPAY ZEKA ÖZETİ ---\n${result}` : additionalText;
         const response = await uploadInvoice(
           image, 
           filename, 
           'image/jpeg', 
           selectedCategory, 
-          selectedDocType.id, 
-          additionalText, 
+          finalText, 
           base64Image,
-          parseFloat(amount) || 0,
+          parseTurkishNumber(amount),
           formattedDate
         );
-        setResult(response.data.text);
+        // Artık response.data.text'e gerek yok, elimizde zaten var
         
         // Tüm belge türleri için bildirim zamanla
         if (selectedReminders.length > 0 && Platform.OS !== 'web') {
@@ -695,7 +699,7 @@ const styles = StyleSheet.create({
   pageDescription: { color: '#a1a1aa', fontSize: 16, fontWeight: '500', lineHeight: 24, textAlign: 'center', paddingHorizontal: 20 },
   formContainer: { flex: 1, width: '100%' },
   inputLabel: { color: '#a1a1aa', fontSize: 13, marginBottom: 8, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, height: 56, marginBottom: 24 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, height: 56, marginBottom: 24, width: '100%', maxWidth: '100%', overflow: 'hidden', flexShrink: 1 },
   inputIcon: { marginRight: 12 },
   input: { flex: 1, fontSize: 16, fontWeight: '500', height: '100%' },
   buttonContainer: { flexDirection: 'row', width: '100%', marginBottom: 32 },
