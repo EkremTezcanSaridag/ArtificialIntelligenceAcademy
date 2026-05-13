@@ -66,63 +66,6 @@ export async function registerForPushNotificationsAsync() {
   }
 }
 
-export async function scheduleWarrantyNotification(
-  itemName: string,
-  expirationDate: Date,
-  notifyBefore: '1_week' | '1_month' | 'both' | 'none'
-) {
-  if (notifyBefore === 'none') return;
-
-  // Expo Go Android için bildirim zamanlamayı atla (hata vermemesi için)
-  if (isExpoGo && Platform.OS === 'android') {
-    console.log('Expo Go Android üzerinde bildirim zamanlama atlandı.');
-    return;
-  }
-
-  try {
-    const Notifications = require('expo-notifications');
-
-    const scheduleNotification = async (daysBefore: number, title: string, body: string) => {
-      const triggerDate = new Date(expirationDate);
-      triggerDate.setDate(triggerDate.getDate() - daysBefore);
-
-      // Sadece gelecek tarihler için bildirim kur
-      if (triggerDate.getTime() > Date.now()) {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title,
-            body,
-            data: { itemName, expirationDate: expirationDate.toISOString() },
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: triggerDate,
-          },
-        });
-        console.log(`Bildirim zamanlandı: ${title} -> Tarih: ${triggerDate.toLocaleDateString()}`);
-      }
-    };
-
-    if (notifyBefore === '1_week' || notifyBefore === 'both') {
-      await scheduleNotification(
-        7,
-        'Garanti Süresi Yaklaşıyor! ⏳',
-        `"${itemName}" adlı ürününüzün garanti süresinin bitmesine 1 hafta kaldı.`
-      );
-    }
-
-    if (notifyBefore === '1_month' || notifyBefore === 'both') {
-      await scheduleNotification(
-        30,
-        'Garanti Süresi Uyarısı 📅',
-        `"${itemName}" adlı ürününüzün garanti süresinin bitmesine 1 ay kaldı.`
-      );
-    }
-  } catch (error) {
-    console.error('Notification scheduling error:', error);
-  }
-}
-
 export type ReminderOption = '1_minute' | '1_week' | '2_weeks' | '3_weeks' | '1_month' | '2_months' | '3_months';
 
 const REMINDER_DAYS: Record<ReminderOption, number> = {

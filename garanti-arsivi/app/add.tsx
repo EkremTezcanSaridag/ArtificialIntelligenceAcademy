@@ -5,7 +5,7 @@ import {
 import { useState, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { uploadInvoice, addManualRecord, analyzeDocument } from '../src/services/api';
+import { uploadInvoice, addManualRecord, analyzeDocument, parseTurkishNumber } from '../src/services/api';
 import { registerForPushNotificationsAsync, scheduleReminderNotification } from '../src/services/notifications';
 import type { ReminderOption } from '../src/services/notifications';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,7 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 const { width } = Dimensions.get('window');
 
-type DocType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'kart';
+type DocType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'subscription';
 
 interface DocTypeConfig {
   id: DocType;
@@ -34,27 +34,31 @@ interface DocTypeConfig {
 const DOC_TYPES: DocTypeConfig[] = [
   {
     id: 'warranty', label: 'Garanti Belgesi', icon: 'shield-checkmark', colors: ['#6366f1', '#4338ca'], color: '#6366f1', categories: ['Elektronik', 'Ev Aletleri', 'Giyim', 'Diğer'], description: 'Ürün garanti belgesi',
-    titleLabel: 'Ürün Adı / Marka', amountLabel: 'Fatura Tutarı (TL)', dateLabel: 'Satın Alma Tarihi'
+    titleLabel: 'Ürün Adı / Marka', amountLabel: 'Fatura Tutarı', dateLabel: 'Satın Alma Tarihi'
   },
   {
     id: 'invoice', label: 'Fatura', icon: 'receipt', colors: ['#0ea5e9', '#0284c7'], color: '#0ea5e9', categories: ['Elektrik', 'Su', 'Doğal Gaz', 'İnternet', 'Diğer'], description: 'Fatura & gider belgesi',
-    titleLabel: 'Kurum Adı', amountLabel: 'Fatura Tutarı (TL)', dateLabel: 'Son Ödeme Tarihi'
+    titleLabel: 'Kurum Adı', amountLabel: 'Fatura Tutarı', dateLabel: 'Son Ödeme Tarihi'
   },
   {
     id: 'mtv', label: 'MTV Vergisi', icon: 'car-sport', colors: ['#f59e0b', '#d97706'], color: '#f59e0b', categories: ['Otomobil', 'Motosiklet', 'Kamyon', 'Diğer'], description: 'Motorlu taşıt vergisi',
-    titleLabel: 'Araç Plakası', amountLabel: 'Vergi Tutarı (TL)', dateLabel: 'Son Ödeme Tarihi'
+    titleLabel: 'Araç Plakası', amountLabel: 'Vergi Tutarı', dateLabel: 'Son Ödeme Tarihi'
   },
   {
     id: 'konut', label: 'Konut Vergisi', icon: 'home', colors: ['#10b981', '#059669'], color: '#10b981', categories: ['Emlak Vergisi', 'DASK', 'Tapu Harcı', 'Diğer'], description: 'Konut & gayrimenkul vergisi',
-    titleLabel: 'İlçe / Belediye', amountLabel: 'Vergi Tutarı (TL)', dateLabel: 'Son Ödeme Tarihi'
+    titleLabel: 'İlçe / Belediye', amountLabel: 'Vergi Tutarı', dateLabel: 'Son Ödeme Tarihi'
   },
   {
     id: 'kontrat', label: 'Kontrat', icon: 'document-text', colors: ['#8b5cf6', '#7c3aed'], color: '#8b5cf6', categories: ['Ev Sahibi', 'Kiracı', 'İş Sözleşmesi', 'Diğer'], description: 'Kira & sözleşme belgesi',
-    titleLabel: 'Taraf / Kişi Adı', amountLabel: 'Aylık Bedel (TL)', dateLabel: 'Bitiş Tarihi'
+    titleLabel: 'Taraf / Kişi Adı', amountLabel: 'Aylık Bedel', dateLabel: 'Bitiş Tarihi'
   },
   {
     id: 'kredi', label: 'Borçlarım', icon: 'wallet', colors: ['#ef4444', '#dc2626'], color: '#ef4444', categories: ['Konut Kredisi', 'Taşıt Kredisi', 'İhtiyaç Kredisi', 'KYK Kredisi', 'Elden Borç', 'Diğer'], description: 'Kredi & borç belgesi',
-    titleLabel: 'Banka / Kurum Adı', amountLabel: 'Tutar (TL)', dateLabel: 'Son Ödeme Tarihi'
+    titleLabel: 'Banka / Kurum Adı', amountLabel: 'Tutar', dateLabel: 'Son Ödeme Tarihi'
+  },
+  {
+    id: 'subscription', label: 'Abonelik', icon: 'repeat', colors: ['#ec4899', '#db2777'], color: '#ec4899', categories: ['Dijital Platform', 'Müzik', 'Yazılım / Bulut', 'Spor Salonu', 'Diğer'], description: 'Düzenli ödeme & abonelik',
+    titleLabel: 'Hizmet / Platform Adı', amountLabel: 'Aylık Ücret', dateLabel: 'Yenileme Tarihi'
   }
 ];
 
@@ -81,6 +85,7 @@ export default function AddScreen() {
   const [interestRate, setInterestRate] = useState('');
   const [months, setMonths] = useState('');
   const [principal, setPrincipal] = useState('');
+  const [currency, setCurrency] = useState('TRY');
 
   const isDetailedCredit = selectedDocType.id === 'kredi' && ['Konut Kredisi', 'Taşıt Kredisi', 'İhtiyaç Kredisi', 'KYK Kredisi'].includes(selectedCategory);
 
@@ -142,10 +147,20 @@ export default function AddScreen() {
     }
   };
 
+  const standardToTurkish = (standardVal: string) => {
+    if (!standardVal) return '';
+    // "80100.00" -> "80.100,00"
+    const parts = standardVal.replace(',', '').split('.');
+    let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    let decimalPart = parts[1] !== undefined ? parts[1].slice(0, 2) : undefined;
+    
+    if (decimalPart !== undefined) return `${integerPart},${decimalPart}`;
+    return integerPart;
+  };
+
   const getDynamicTitleLabel = () => {
     if (selectedDocType.id === 'kredi') {
       if (selectedCategory === 'Elden Borç') return 'Kişi Adı / Borçlu';
-      if (selectedCategory === 'Kredi Kartı') return 'Banka / Kart Adı';
       if (selectedCategory === 'KYK Kredisi') return 'Öğrenim Kredisi / Kurum';
       return 'Banka Adı';
     }
@@ -160,14 +175,13 @@ export default function AddScreen() {
 
   const getDynamicAmountLabel = () => {
     if (selectedDocType.id === 'kredi') {
-      if (selectedCategory === 'Kredi Kartı') return 'Güncel Borç (TL)';
-      if (selectedCategory === 'Elden Borç') return 'Verilen / Alınan Tutar (TL)';
-      if (selectedCategory === 'KYK Kredisi') return 'Aylık Ödeme Tutarı (TL)';
-      return 'Aylık Taksit Tutarı (TL)';
+      if (selectedCategory === 'Elden Borç') return 'Verilen / Alınan Tutar';
+      if (selectedCategory === 'KYK Kredisi') return 'Aylık Ödeme Tutarı';
+      return 'Aylık Taksit Tutarı';
     }
     if (selectedDocType.id === 'kontrat') {
-      if (selectedCategory === 'İş Sözleşmesi') return 'Maaş / Ücret (TL)';
-      return 'Aylık Bedel (TL)';
+      if (selectedCategory === 'İş Sözleşmesi') return 'Maaş / Ücret';
+      return 'Aylık Bedel';
     }
     return selectedDocType.amountLabel;
   };
@@ -201,7 +215,7 @@ export default function AddScreen() {
     try {
       const data = await analyzeDocument(uri, filename, mime, base64);
       if (data.title) setTitle(data.title);
-      if (data.amount) setAmount(data.amount);
+      if (data.amount) setAmount(standardToTurkish(data.amount.toString()));
       if (data.date) {
         setFormattedDate(data.date);
         const [d, m, y] = data.date.split('.').map(Number);
@@ -212,6 +226,7 @@ export default function AddScreen() {
       if (data.category && selectedDocType.categories?.includes(data.category)) {
         setSelectedCategory(data.category);
       }
+      if (data.currency) setCurrency(data.currency);
       setResult(data.summary);
     } catch (e) {
       console.warn("AI Analiz hatası:", e);
@@ -223,7 +238,7 @@ export default function AddScreen() {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Hata', 'Kamera izni gerekiyor.'); return; }
-    let res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8, base64: true });
+    let res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.5, base64: true });
     if (!res.canceled) { 
         const asset = res.assets[0];
         setImage(asset.uri); 
@@ -244,16 +259,16 @@ export default function AddScreen() {
     }
     setLoading(true);
     try {
-      let additionalText = `Tutar: ${amount} TL\n${getDynamicDateLabel()}: ${formattedDate}`;
+      let additionalText = `Tutar: ${amount} ${currency}\n${getDynamicDateLabel()}: ${formattedDate}`;
       
       if (isDetailedCredit) {
          if (months) additionalText += `\nVade: ${months} Ay`;
          if (interestRate) additionalText += `\nFaiz Oranı: %${interestRate}`;
-         if (principal) additionalText += `\nAnapara: ${principal} TL`;
-         additionalText += `\nAylık Taksit: ${amount} TL`;
+         if (principal) additionalText += `\nAnapara: ${principal} ${currency}`;
+         additionalText += `\nAylık Taksit: ${amount} ${currency}`;
          const parseTr = (s: string) => parseFloat(s.replace(/\./g, '').replace(',', '.'));
          const totalRepayment = (parseTr(amount) * parseInt(months));
-         additionalText += `\nToplam Geri Ödeme: ${totalRepayment.toFixed(2).replace('.', ',')} TL`;
+         additionalText += `\nToplam Geri Ödeme: ${totalRepayment.toFixed(2).replace('.', ',')} ${currency}`;
       }
 
       // Hatırlatma tercihlerini Türkçe olarak kaydet
@@ -302,18 +317,20 @@ export default function AddScreen() {
 
       if (image && base64Image) {
         const filename = title ? `${title}` : (image.split('/').pop() || 'belge.jpg');
+        const finalText = result ? `${additionalText}\n\n--- YAPAY ZEKA ÖZETİ ---\n${result}` : additionalText;
         const response = await uploadInvoice(
           image, 
           filename, 
           'image/jpeg', 
           selectedCategory, 
-          selectedDocType.id, 
-          additionalText, 
+          selectedDocType.id,
+          finalText, 
           base64Image,
-          parseFloat(amount) || 0,
-          formattedDate
+          parseTurkishNumber(amount),
+          formattedDate,
+          currency
         );
-        setResult(response.data.text);
+        // Artık response.data.text'e gerek yok, elimizde zaten var
         
         // Tüm belge türleri için bildirim zamanla
         if (selectedReminders.length > 0 && Platform.OS !== 'web') {
@@ -326,8 +343,8 @@ export default function AddScreen() {
         }
         triggerCalendarPrompt(filename, selectedDocType.label);
       } else {
-        await addManualRecord(title, amount, formattedDate, selectedCategory, selectedDocType.id, additionalText);
-        
+        await addManualRecord(title, amount, formattedDate, selectedCategory, selectedDocType.id, additionalText, currency);
+      
         // Tüm belge türleri için bildirim zamanla
         if (selectedReminders.length > 0 && Platform.OS !== 'web') {
            try {
@@ -361,6 +378,12 @@ export default function AddScreen() {
 
         {/* Header */}
         <View style={styles.pageHeader}>
+          <Pressable 
+            onPress={() => router.push('/')}
+            style={{ position: 'absolute', top: 0, left: 0, width: 44, height: 44, borderRadius: 22, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}
+          >
+            <Ionicons name="arrow-back" size={24} color={isDark ? '#fff' : '#000'} />
+          </Pressable>
           <LinearGradient colors={selectedDocType.colors} style={styles.iconCircle} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <Ionicons name={selectedDocType.icon as any} size={30} color="#fff" />
           </LinearGradient>
@@ -433,6 +456,37 @@ export default function AddScreen() {
                 else setAmount(formatted);
               }}
             />
+          </View>
+
+          {/* Para Birimi Seçimi */}
+          <Text style={styles.inputLabel}>Para Birimi</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
+            {['TRY', 'USD', 'EUR', 'GBP'].map((cur) => (
+              <Pressable
+                key={cur}
+                onPress={() => setCurrency(cur)}
+                style={({ pressed }) => [
+                  {
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    alignItems: 'center',
+                    backgroundColor: currency === cur 
+                      ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)') 
+                      : (isDark ? 'rgba(255,255,255,0.03)' : '#ffffff'),
+                    borderColor: currency === cur ? '#6366f1' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'),
+                    opacity: pressed ? 0.7 : 1
+                  }
+                ]}
+              >
+                <Text style={{ 
+                  color: currency === cur ? '#6366f1' : (isDark ? '#a1a1aa' : '#71717a'),
+                  fontWeight: currency === cur ? '900' : '600',
+                  fontSize: 13
+                }}>{cur === 'TRY' ? '₺ TRY' : cur === 'USD' ? '$ USD' : cur === 'EUR' ? '€ EUR' : '£ GBP'}</Text>
+              </Pressable>
+            ))}
           </View>
 
           {isDetailedCredit && (
@@ -695,7 +749,8 @@ const styles = StyleSheet.create({
   pageDescription: { color: '#a1a1aa', fontSize: 16, fontWeight: '500', lineHeight: 24, textAlign: 'center', paddingHorizontal: 20 },
   formContainer: { flex: 1, width: '100%' },
   inputLabel: { color: '#a1a1aa', fontSize: 13, marginBottom: 8, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, height: 56, marginBottom: 24 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, height: 56, marginBottom: 24, width: '100%', maxWidth: '100%', overflow: 'hidden', flexShrink: 1 },
+  buttonIcon: { marginRight: 8 },
   inputIcon: { marginRight: 12 },
   input: { flex: 1, fontSize: 16, fontWeight: '500', height: '100%' },
   buttonContainer: { flexDirection: 'row', width: '100%', marginBottom: 32 },
