@@ -1,5 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
+import ws from 'ws';
+import { Platform } from 'react-native';
+
+// Node.js/Web SSR ortamları için WebSocket polyfill (EN TEPEDE OLMALI)
+if (typeof WebSocket === 'undefined' && Platform.OS === 'web') {
+  (global as any).WebSocket = ws;
+}
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_KEY || '';

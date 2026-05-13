@@ -13,17 +13,18 @@ SplashScreen.preventAutoHideAsync();
 
 function TabLayout() {
   const { isDark, toggleTheme } = useTheme();
-  const [showSplash, setShowSplash] = useState(Platform.OS !== 'web');
+  const [showSplash, setShowSplash] = useState(false); // Test için false yapıldı
 
   useEffect(() => {
-    // Native splash'i hemen kapat, yerini Custom splash alıyor
-    SplashScreen.hideAsync();
-
-    // 2.5 saniye sonra custom splash'i kapat, ana sayfaya geç
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 2500);
-    return () => clearTimeout(timer);
+    // Uygulama yüklenir yüklenmez splash ekranını zorla kapat
+    async function prepare() {
+      try {
+        await SplashScreen.hideAsync();
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+    prepare();
   }, []);
 
   // Custom splash ekranını göster
@@ -33,7 +34,11 @@ function TabLayout() {
 
   return (
     <NavThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
-      <StatusBar style={isDark ? "light" : "dark"} />
+      <StatusBar 
+        style={isDark ? "light" : "dark"} 
+        backgroundColor={isDark ? "#09090b" : "#f4f4f5"}
+        translucent={true}
+      />
       <Tabs
         screenOptions={{
           headerStyle: {
