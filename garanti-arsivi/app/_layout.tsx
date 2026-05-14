@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider as NavThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +15,7 @@ SplashScreen.preventAutoHideAsync();
 function TabLayout() {
   const { isDark, toggleTheme } = useTheme();
   const [showSplash, setShowSplash] = useState(Platform.OS !== 'web');
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     // Native splash'i hemen kapat, yerini Custom splash alıyor
@@ -58,8 +60,8 @@ function TabLayout() {
             backgroundColor: isDark ? '#09090b' : '#ffffff',
             borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
             borderTopWidth: 1,
-            height: Platform.OS === 'ios' ? 80 : 65,
-            paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+            height: Platform.OS === 'ios' ? 80 : (60 + insets.bottom),
+            paddingBottom: Platform.OS === 'ios' ? 24 : Math.max(insets.bottom, 8),
             paddingTop: 8,
             elevation: 8,
             shadowColor: '#000',
