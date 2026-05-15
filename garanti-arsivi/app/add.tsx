@@ -196,7 +196,7 @@ export default function AddScreen() {
   };
 
   const pickImage = async () => {
-    let res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.8, base64: true });
+    let res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 0.8, base64: true });
     if (!res.canceled) { 
         const asset = res.assets[0];
         setImage(asset.uri); 
@@ -238,7 +238,7 @@ export default function AddScreen() {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Hata', 'Kamera izni gerekiyor.'); return; }
-    let res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.5, base64: true });
+    let res = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.5, base64: true });
     if (!res.canceled) { 
         const asset = res.assets[0];
         setImage(asset.uri); 
