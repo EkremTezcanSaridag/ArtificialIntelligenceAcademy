@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 17, fontWeight: '800', marginBottom: 12, marginLeft: 2 },
   chartContainer: { borderRadius: 24, paddingVertical: 12, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)' },
-  alertCard: { padding: 16, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.1)' },
+  alertCard: { padding: 16, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.1)', elevation: 2 },
   alertIconBg: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(239, 68, 68, 0.1)', justifyContent: 'center', alignItems: 'center' },
   alertHeader: { fontSize: 9, color: '#ef4444', fontWeight: '800', letterSpacing: 0.5 },
   alertText: { fontSize: 14, fontWeight: '700', marginTop: 1 },

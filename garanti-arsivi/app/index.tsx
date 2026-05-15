@@ -324,9 +324,14 @@ export default function HomeScreen() {
           style={({ pressed }) => [
             styles.cardContainer,
             {
-              backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff',
+              backgroundColor: isDark ? '#1a1a2e' : '#ffffff',
               borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-              transform: [{ scale: pressed ? 0.98 : 1 }]
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+              elevation: 4,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.05,
+              shadowRadius: 8,
             }
           ]}
         >
@@ -474,7 +479,7 @@ export default function HomeScreen() {
                 {isActive ? (
                   <LinearGradient
                     colors={tab.colors}
-                    style={[styles.tabGradientActive, { shadowColor: tab.color }]}
+                    style={[styles.tabGradientActive, { shadowColor: tab.color, elevation: 6 }]}
                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   >
                     <Ionicons name={tab.icon as any} size={16} color="#fff" />
@@ -578,7 +583,8 @@ export default function HomeScreen() {
                         shadowOffset: { width: 0, height: 8 },
                         shadowOpacity: 0.15,
                         shadowRadius: 16,
-                        elevation: 5
+                        elevation: 5,
+                        backgroundColor: isDark ? '#1a1200' : '#fef3c7'
                       }}
                     >
                       <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(217, 119, 6, 0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
@@ -618,7 +624,7 @@ export default function HomeScreen() {
 
       {/* Floating Action Button (FAB) */}
       <Pressable
-        style={({ pressed }) => [styles.fab, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}
+        style={({ pressed }) => [styles.fab, { transform: [{ scale: pressed ? 0.95 : 1 }], elevation: 12 }]}
         onPress={() => router.push(`/add?type=${activeTab}`)}
       >
         <LinearGradient colors={activeTabConfig.colors} style={styles.fabGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
