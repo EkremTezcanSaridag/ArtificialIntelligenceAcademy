@@ -471,7 +471,7 @@ export default function HomeScreen() {
           )}
         </BlurView>
 
-        <View style={styles.tabGridContent}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabGridContent}>
           {TABS.map(tab => {
             const isActive = activeTab === tab.id;
             return (
@@ -496,7 +496,7 @@ export default function HomeScreen() {
               </Pressable>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       {/* Count badge */}
@@ -1046,7 +1046,7 @@ const styles = StyleSheet.create({
   tabWrapper: { paddingHorizontal: 24, zIndex: 10, marginBottom: 16 },
   searchWrapper: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 50, borderRadius: 15, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(99,102,241,0.1)' },
   searchInput: { flex: 1, fontSize: 15, fontWeight: '600' },
-  tabGridContent: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tabGridContent: { flexDirection: 'row', gap: 10, paddingRight: 20 },
   tabPill: { borderRadius: 24, overflow: 'hidden' },
   tabGradientActive: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 24, gap: 8, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
   tabTextActive: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: 0.3 },

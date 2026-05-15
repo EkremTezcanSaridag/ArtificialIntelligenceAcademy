@@ -13,7 +13,7 @@ import Animated, {
 import Svg, { G, Path, Circle } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchInvoices, fetchExchangeRates } from '../src/services/api';
+import { fetchInvoices, fetchExchangeRates, parseTurkishNumber } from '../src/services/api';
 import { useTheme } from '../src/context/ThemeContext';
 import { LineChart } from 'react-native-chart-kit';
 
@@ -151,7 +151,8 @@ export default function StatsScreen() {
       const itemCurrency = rawCurrency === 'TL' ? 'TRY' : rawCurrency;
       const targetCurrency = displayCurrency.toUpperCase();
 
-      let amountInTarget = Number(item.amount) || 0;
+      let parsedAmount = typeof item.amount === 'number' ? item.amount : parseTurkishNumber(item.amount?.toString());
+      let amountInTarget = parsedAmount || 0;
 
       // Eğer kur verisi yoksa veya para birimleri aynıysa çevirme yapma
       if (!rates || itemCurrency === targetCurrency) {
@@ -160,7 +161,7 @@ export default function StatsScreen() {
 
       try {
         // 1. Önce veriyi TRY'ye çevir
-        let amountTRY = Number(item.amount) || 0;
+        let amountTRY = parsedAmount || 0;
         if (itemCurrency !== 'TRY') {
           const rateToTRY = rates[itemCurrency]; // 1 TRY = X Currency
           if (rateToTRY && rateToTRY > 0) {
@@ -374,7 +375,7 @@ export default function StatsScreen() {
                           </Text>
                         </View>
                         <Text style={[styles.categoryPercent, { color: item.color }]}>
-                          %{Math.round((item.population / stats.total) * 100)}
+                          %{stats.total > 0 ? Math.round((item.population / stats.total) * 100) : 0}
                         </Text>
                       </View>
                     ))}
@@ -384,16 +385,18 @@ export default function StatsScreen() {
             </View>
 
             {/* Alert Card */}
-            <View style={[styles.alertCard, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.08)' : '#fff1f2' }]}>
-              <View style={styles.alertIconBg}>
-                <Ionicons name="flash" size={18} color="#ef4444" />
+            {stats.max && stats.max.amountInTarget > 0 && (
+              <View style={[styles.alertCard, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.08)' : '#fff1f2' }]}>
+                <View style={styles.alertIconBg}>
+                  <Ionicons name="flash" size={18} color="#ef4444" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.alertHeader}>EN YÜKSEK</Text>
+                  <Text style={[styles.alertText, { color: isDark ? '#fff' : '#000' }]} numberOfLines={1}>{stats.max?.filename}</Text>
+                </View>
+                <Text style={styles.alertAmount}>{stats.max?.amountInTarget?.toLocaleString('tr-TR')} {stats.activeSymbol}</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.alertHeader}>EN YÜKSEK</Text>
-                <Text style={[styles.alertText, { color: isDark ? '#fff' : '#000' }]} numberOfLines={1}>{stats.max?.filename}</Text>
-              </View>
-              <Text style={styles.alertAmount}>{stats.max?.amountInTarget?.toLocaleString('tr-TR')} {stats.activeSymbol}</Text>
-            </View>
+            )}
           </>
         )}
 

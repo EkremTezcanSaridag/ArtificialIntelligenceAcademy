@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider as NavThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,18 +14,18 @@ SplashScreen.preventAutoHideAsync();
 
 function TabLayout() {
   const { isDark, toggleTheme } = useTheme();
-  const [showSplash, setShowSplash] = useState(false); // Test için false yapıldı
+  const [showSplash, setShowSplash] = useState(Platform.OS !== 'web');
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    // Uygulama yüklenir yüklenmez splash ekranını zorla kapat
-    async function prepare() {
-      try {
-        await SplashScreen.hideAsync();
-      } catch (e) {
-        console.warn(e);
-      }
-    }
-    prepare();
+    // Native splash'i hemen kapat, yerini Custom splash alıyor
+    SplashScreen.hideAsync();
+
+    // 2.5 saniye sonra custom splash'i kapat, ana sayfaya geç
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2500);
+    return () => clearTimeout(timer);
   }, []);
 
   // Custom splash ekranını göster
@@ -34,11 +35,7 @@ function TabLayout() {
 
   return (
     <NavThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
-      <StatusBar 
-        style={isDark ? "light" : "dark"} 
-        backgroundColor={isDark ? "#09090b" : "#f4f4f5"}
-        translucent={true}
-      />
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Tabs
         screenOptions={{
           headerStyle: {
@@ -55,16 +52,16 @@ function TabLayout() {
             fontSize: 18
           },
           headerRight: () => (
-             <Pressable onPress={toggleTheme} style={{ marginRight: 24, justifyContent: 'center', alignItems: 'center' }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Ionicons name={isDark ? "sunny" : "moon"} size={24} color={isDark ? "#ffffff" : "#000000"} />
-             </Pressable>
+            <Pressable onPress={toggleTheme} style={{ marginRight: 24, justifyContent: 'center', alignItems: 'center' }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name={isDark ? "sunny" : "moon"} size={24} color={isDark ? "#ffffff" : "#000000"} />
+            </Pressable>
           ),
           tabBarStyle: {
             backgroundColor: isDark ? '#09090b' : '#ffffff',
             borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
             borderTopWidth: 1,
-            height: Platform.OS === 'ios' ? 80 : 65,
-            paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+            height: Platform.OS === 'ios' ? 80 : 55 + insets.bottom,
+            paddingBottom: Platform.OS === 'ios' ? 24 : Math.max(insets.bottom - 15, 8),
             paddingTop: 8,
             elevation: 8,
             shadowColor: '#000',
@@ -77,41 +74,41 @@ function TabLayout() {
           sceneStyle: { backgroundColor: isDark ? '#09090b' : '#f4f4f5' }
         }}
       >
-        <Tabs.Screen 
-          name="index" 
-          options={{ 
+        <Tabs.Screen
+          name="index"
+          options={{
             headerShown: false,
-            title: 'Arşiv', 
+            title: 'Arşiv',
             tabBarIcon: ({ color }) => <Ionicons name="shield-checkmark" size={26} color={color} />,
             tabBarLabelStyle: {
               fontSize: 12,
               fontWeight: '700',
               marginTop: 4
             }
-          }} 
+          }}
         />
 
-        <Tabs.Screen 
-          name="stats" 
-          options={{ 
+        <Tabs.Screen
+          name="stats"
+          options={{
             headerShown: false,
-            title: 'İstatistikler', 
+            title: 'İstatistikler',
             tabBarIcon: ({ color }) => <Ionicons name="pie-chart" size={26} color={color} />,
             tabBarLabelStyle: {
               fontSize: 12,
               fontWeight: '700',
               marginTop: 4
             }
-          }} 
+          }}
         />
 
-        <Tabs.Screen 
-          name="add" 
-          options={{ 
+        <Tabs.Screen
+          name="add"
+          options={{
             title: 'Yeni Kayıt Ekle',
             href: null,
             tabBarStyle: { display: 'none' }
-          }} 
+          }}
         />
       </Tabs>
     </NavThemeProvider>
