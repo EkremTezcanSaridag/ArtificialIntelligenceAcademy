@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -218,7 +219,10 @@ export default function CustomSplash() {
             },
           ]}
         >
-          <Text style={styles.logoIcon}>🛡️</Text>
+          <Image 
+            source={require('../assets/images/icon.png')} 
+            style={{ width: 70, height: 70, borderRadius: 16 }} 
+          />
         </Animated.View>
 
         {/* Başlık */}

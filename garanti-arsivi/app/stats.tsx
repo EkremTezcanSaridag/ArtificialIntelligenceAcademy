@@ -1,15 +1,6 @@
-import { View, Text, StyleSheet, ScrollView, Dimensions, ActivityIndicator, Platform, Pressable } from 'react-native';
-import { useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, ActivityIndicator, Platform, Pressable, Animated } from 'react-native';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import Animated, { 
-  FadeIn, 
-  Keyframe, 
-  useSharedValue, 
-  useAnimatedProps, 
-  withTiming, 
-  withDelay,
-  Easing
-} from 'react-native-reanimated';
 import Svg, { G, Path, Circle } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,72 +8,66 @@ import { fetchInvoices, fetchExchangeRates, parseTurkishNumber } from '../src/se
 import { useTheme } from '../src/context/ThemeContext';
 import { LineChart } from 'react-native-chart-kit';
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-
 const CustomAnimatedPie = ({ data, size, isDark }: { data: any[], size: number, isDark: boolean }) => {
   const radius = size / 2.5;
   const strokeWidth = 35;
   const center = size / 2;
-  const circumference = 2 * Math.PI * radius;
-  
-  const progress = useSharedValue(0);
+  const total = data.reduce((acc: number, item: any) => acc + item.population, 0);
 
-  useFocusEffect(
-    useCallback(() => {
-      progress.value = 0;
-      progress.value = withTiming(1, { 
-        duration: 1500, 
-        easing: Easing.out(Easing.exp) 
-      });
-    }, [])
-  );
+  const animProgress = useRef(new Animated.Value(0)).current;
 
-  let currentAngle = 0;
-  const total = data.reduce((acc, item) => acc + item.population, 0);
+  useEffect(() => {
+    animProgress.setValue(0);
+    Animated.timing(animProgress, {
+      toValue: 1,
+      duration: 1500,
+      useNativeDriver: false,
+    }).start();
+  }, [data]);
+
+  // Static pie chart (no worklets needed)
+  let currentAngle = -90;
+
+  const createArcPath = (cx: number, cy: number, r: number, startAngle: number, endAngle: number) => {
+    const start = {
+      x: cx + r * Math.cos((Math.PI / 180) * startAngle),
+      y: cy + r * Math.sin((Math.PI / 180) * startAngle),
+    };
+    const end = {
+      x: cx + r * Math.cos((Math.PI / 180) * endAngle),
+      y: cy + r * Math.sin((Math.PI / 180) * endAngle),
+    };
+    const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`;
+  };
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <G rotation="-90" origin={`${center}, ${center}`}>
-          {data.map((item, index) => {
-            const percentage = item.population / total;
-            const strokeDasharray = circumference;
-            
-            const AnimatedSector = ({ percentage, color, delayAngle }: any) => {
-              const animatedProps = useAnimatedProps(() => {
-                const dashOffset = circumference - (circumference * percentage * progress.value);
-                return {
-                  strokeDashoffset: dashOffset
-                };
-              });
+        {data.map((item, index) => {
+          const percentage = item.population / total;
+          const sweepAngle = percentage * 360;
+          // Avoid rendering a full 360 arc (SVG can't handle it)
+          const clampedSweep = Math.min(sweepAngle, 359.99);
+          const startAngle = currentAngle;
+          const endAngle = currentAngle + clampedSweep;
+          currentAngle += sweepAngle;
 
-              return (
-                <AnimatedPath
-                  d={`M ${center} ${center} m 0 -${radius} a ${radius} ${radius} 0 1 1 0 ${2 * radius} a ${radius} ${radius} 0 1 1 0 -${2 * radius}`}
-                  fill="none"
-                  stroke={color}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={`${circumference} ${circumference}`}
-                  animatedProps={animatedProps}
-                  rotation={delayAngle}
-                  origin={`${center}, ${center}`}
-                  strokeLinecap="butt"
-                />
-              );
-            };
+          if (sweepAngle < 0.5) return null;
 
-            const sector = (
-              <AnimatedSector 
-                key={index} 
-                percentage={percentage} 
-                color={item.color} 
-                delayAngle={currentAngle} 
-              />
-            );
-            currentAngle += percentage * 360;
-            return sector;
-          })}
-        </G>
+          const d = createArcPath(center, center, radius, startAngle, endAngle);
+
+          return (
+            <Path
+              key={index}
+              d={d}
+              fill="none"
+              stroke={item.color}
+              strokeWidth={strokeWidth}
+              strokeLinecap="butt"
+            />
+          );
+        })}
       </Svg>
     </View>
   );
@@ -122,6 +107,8 @@ export default function StatsScreen() {
   const { isDark } = useTheme();
   const router = useRouter();
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
   const loadStats = async () => {
     try {
       const [invoices, exchangeRates] = await Promise.all([
@@ -134,6 +121,11 @@ export default function StatsScreen() {
       console.error("İstatistikler yüklenemedi:", error);
     } finally {
       setLoading(false);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }).start();
     }
   };
 
@@ -231,17 +223,6 @@ export default function StatsScreen() {
     return { total, max, pieData, lineData, activeSymbol };
   }, [data, rates, displayCurrency]);
 
-  const rotatingEntry = new Keyframe({
-    0: {
-      transform: [{ rotate: '0deg' }, { scale: 0 }],
-      opacity: 0,
-    },
-    100: {
-      transform: [{ rotate: '360deg' }, { scale: 1 }],
-      opacity: 1,
-    },
-  }).duration(1000);
-
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#f8fafc', justifyContent: 'center', alignItems: 'center' }]}>
@@ -252,7 +233,11 @@ export default function StatsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#f8fafc' }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <Animated.ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        style={{ opacity: fadeAnim }}
+      >
 
         {/* Header Section */}
         <View style={styles.header}>
@@ -401,7 +386,7 @@ export default function StatsScreen() {
         )}
 
         <View style={{ height: 100 }} />
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

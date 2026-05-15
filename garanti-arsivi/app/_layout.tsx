@@ -79,7 +79,7 @@ function TabLayout() {
           options={{
             headerShown: false,
             title: 'Arşiv',
-            tabBarIcon: ({ color }) => <Ionicons name="shield-checkmark" size={26} color={color} />,
+            tabBarIcon: ({ color }) => <Ionicons name="folder-open" size={26} color={color} />,
             tabBarLabelStyle: {
               fontSize: 12,
               fontWeight: '700',

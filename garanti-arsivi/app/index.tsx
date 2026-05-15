@@ -434,9 +434,16 @@ export default function HomeScreen() {
       <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <View style={styles.pageHeader}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.pageTitle, { color: isDark ? '#ffffff' : '#09090b' }]}>Dijital Arşiv</Text>
-              <Text style={styles.pageDescription}>Belgeleriniz yapay zeka güvencesiyle saklanıyor.</Text>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Image 
+                source={require('../assets/images/logo-transparent.png')} 
+                style={{ width: 42, height: 42 }} 
+                resizeMode="contain"
+              />
+              <View>
+                <Text style={[styles.pageTitle, { color: isDark ? '#ffffff' : '#09090b' }]}>Dijital Arşiv</Text>
+                <Text style={styles.pageDescription}>Belgeleriniz yapay zeka güvencesiyle saklanıyor.</Text>
+              </View>
             </View>
             <Pressable onPress={toggleTheme} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}>
               <View style={{
