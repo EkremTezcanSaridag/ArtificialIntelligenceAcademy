@@ -1,12 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
-import ws from 'ws';
 import { Platform } from 'react-native';
-
-// Node.js/Web SSR ortamları için WebSocket polyfill (EN TEPEDE OLMALI)
-if (typeof WebSocket === 'undefined' && Platform.OS === 'web') {
-  (global as any).WebSocket = ws;
-}
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_KEY || '';
@@ -40,7 +34,7 @@ export const fetchInvoices = async () => {
     .from('invoices')
     .select('*')
     .order('created_at', { ascending: false });
-  
+
   if (error) throw error;
   return data;
 };
@@ -50,7 +44,7 @@ export const deleteInvoice = async (id: string) => {
     .from('invoices')
     .delete()
     .eq('id', id);
-  
+
   if (error) throw error;
 };
 
@@ -59,14 +53,14 @@ export const updateInvoiceDetails = async (id: string, updates: any) => {
     .from('invoices')
     .update(updates)
     .eq('id', id);
-  
+
   if (error) throw error;
 };
 
 export const uploadInvoice = async (
-  uri: string, 
-  filename: string, 
-  mimeType: string, 
+  uri: string,
+  filename: string,
+  mimeType: string,
   category: string,
   documentType: 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'subscription' = 'warranty',
   finalText: string,
@@ -80,7 +74,7 @@ export const uploadInvoice = async (
   // 1. Fotoğraf varsa Supabase Storage'a yükle
   if (base64Image) {
     console.log('1. Fotoğraf buluta (Supabase Storage) yükleniyor...');
-    
+
     // Dosya adını sanitize et (Türkçe karakter ve boşlukları temizle)
     const safeFilename = filename
       .replace(/[\s]/g, '_')
@@ -103,14 +97,14 @@ export const uploadInvoice = async (
     const { data: urlData } = supabase.storage
       .from('invoices')
       .getPublicUrl(safeFilename);
-    
+
     publicUrl = urlData.publicUrl;
     console.log('✅ Fotoğraf başarıyla yüklendi:', publicUrl);
   }
 
   // 2. Veritabanına kaydet
   console.log('2. Veritabanına kaydediliyor...');
-  
+
   // Tarih formatını dönüştür: GG.AA.YYYY -> YYYY-AA-GG
   let isoDate = null;
   if (dueDate && dueDate.includes('.')) {
@@ -123,10 +117,10 @@ export const uploadInvoice = async (
   const { error: dbError } = await supabase
     .from('invoices')
     .insert([
-      { 
-        filename, 
-        image_url: publicUrl, 
-        category, 
+      {
+        filename,
+        image_url: publicUrl,
+        category,
         type: documentType,
         raw_text: finalText,
         amount: amount || 0,
@@ -145,16 +139,16 @@ export const uploadInvoice = async (
 };
 
 export const addManualRecord = async (
-  title: string, 
-  amount: string, 
-  date: string, 
-  category: string, 
-  type: string, 
+  title: string,
+  amount: string,
+  date: string,
+  category: string,
+  type: string,
   description: string,
   currency: string = 'TRY'
 ) => {
   const numericAmount = parseTurkishNumber(amount);
-  
+
   // GG.AA.YYYY -> YYYY-AA-GG
   const [d, m, y] = date.split('.');
   const isoDate = `${y}-${m}-${d}`;
@@ -199,7 +193,7 @@ export const analyzeDocument = async (uri: string, filename: string, mime: strin
 
   try {
     // Görsel boyutunu logla (Hata ayıklama için)
-    const sizeInMB = (base64.length * (3/4)) / (1024 * 1024);
+    const sizeInMB = (base64.length * (3 / 4)) / (1024 * 1024);
     console.log(`Analiz ediliyor: ${filename}, Boyut: ${sizeInMB.toFixed(2)} MB`);
 
     const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -254,7 +248,7 @@ export const analyzeDocument = async (uri: string, filename: string, mime: strin
     if (jsonMatch) {
       content = jsonMatch[0];
     }
-    
+
     const result = JSON.parse(content);
 
     return {
