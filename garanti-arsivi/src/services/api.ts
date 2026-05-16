@@ -40,6 +40,38 @@ export const fetchInvoices = async () => {
 };
 
 export const deleteInvoice = async (id: string) => {
+  // Önce kaydı çek, fotoğraf URL'sini al
+  const { data: record, error: fetchError } = await supabase
+    .from('invoices')
+    .select('image_url')
+    .eq('id', id)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  // Storage'daki fotoğrafı sil (varsa)
+  if (record?.image_url) {
+    try {
+      const url = new URL(record.image_url);
+      // URL yapısı: .../storage/v1/object/public/invoices/dosya_adi.jpg
+      const parts = url.pathname.split('/storage/v1/object/public/invoices/');
+      if (parts.length > 1) {
+        const filePath = decodeURIComponent(parts[1]);
+        const { error: storageError } = await supabase.storage
+          .from('invoices')
+          .remove([filePath]);
+        if (storageError) {
+          console.warn('Storage silme hatası:', storageError);
+        } else {
+          console.log('✅ Fotoğraf storage\'dan silindi:', filePath);
+        }
+      }
+    } catch (e) {
+      console.warn('Fotoğraf URL parse hatası:', e);
+    }
+  }
+
+  // Veritabanı kaydını sil
   const { error } = await supabase
     .from('invoices')
     .delete()
