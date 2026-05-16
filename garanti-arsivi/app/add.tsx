@@ -16,7 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 const { width } = Dimensions.get('window');
 
-type DocType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'subscription';
+type DocType = 'warranty' | 'invoice' | 'vehicle' | 'konut' | 'kontrat' | 'kredi' | 'subscription';
 
 interface DocTypeConfig {
   id: DocType;
@@ -45,8 +45,8 @@ const DOC_TYPES: DocTypeConfig[] = [
     titleLabel: 'Kurum Adı', amountLabel: 'Fatura Tutarı', dateLabel: 'Son Ödeme / Fiş Tarihi'
   },
   {
-    id: 'mtv', label: 'MTV Vergisi', icon: 'car-sport', colors: ['#f59e0b', '#d97706'], color: '#f59e0b', categories: ['Otomobil', 'Motosiklet', 'Kamyon', 'Diğer'], description: 'Motorlu taşıt vergisi',
-    titleLabel: 'Araç Plakası', amountLabel: 'Vergi Tutarı', dateLabel: 'Son Ödeme Tarihi'
+    id: 'vehicle', label: 'Garajım', icon: 'car-sport', colors: ['#f59e0b', '#d97706'], color: '#f59e0b', categories: ['Servis / Bakım', 'MTV / Vergi', 'Kasko / Sigorta', 'Oto Aksesuar', 'Diğer'], description: 'Araç ile ilgili tüm belgeler',
+    titleLabel: 'İşlem / Plaka', amountLabel: 'Tutar', dateLabel: 'İşlem Tarihi'
   },
   {
     id: 'konut', label: 'Konut Vergisi', icon: 'home', colors: ['#10b981', '#059669'], color: '#10b981', categories: ['Emlak Vergisi', 'DASK', 'Tapu Harcı', 'Diğer'], description: 'Konut & gayrimenkul vergisi',
@@ -90,8 +90,12 @@ export default function AddScreen() {
   const [months, setMonths] = useState('');
   const [principal, setPrincipal] = useState('');
   const [currency, setCurrency] = useState('TRY');
+  const [folder, setFolder] = useState('');
+  const [nextServiceDate, setNextServiceDate] = useState<Date | null>(null);
+  const [showServicePicker, setShowServicePicker] = useState(false);
 
   const isDetailedCredit = selectedDocType.id === 'kredi' && ['Konut Kredisi', 'Taşıt Kredisi', 'İhtiyaç Kredisi', 'KYK Kredisi'].includes(selectedCategory);
+  const isVehicleType = selectedDocType.id === 'vehicle';
 
   // Kredi Hesaplama Mantığı
   useEffect(() => {
@@ -321,21 +325,24 @@ export default function AddScreen() {
       };
 
       if (images.length > 0 && base64Images.length > 0) {
-        const filename = title ? `${title}` : (images[0].split('/').pop() || 'belge.jpg');
-        const finalText = result ? `${additionalText}\n\n--- YAPAY ZEKA ÖZETİ ---\n${result}` : additionalText;
+        let finalDescription = result ? `${additionalText}\n\n--- YAPAY ZEKA ÖZETİ ---\n${result}` : additionalText;
+        if (folder) finalDescription += `\n[FOLDER:${folder}]`;
+        if (nextServiceDate) {
+          const serviceIso = nextServiceDate.toISOString().split('T')[0];
+          finalDescription += `\n[SERVICE:${serviceIso}]`;
+        }
         const response = await uploadInvoice(
           images, 
-          filename, 
+          title, 
           'image/jpeg', 
           selectedCategory, 
           selectedDocType.id,
-          finalText, 
+          finalDescription, 
           base64Images,
           parseTurkishNumber(amount),
           formattedDate,
           currency
         );
-        // Artık response.data.text'e gerek yok, elimizde zaten var
         
         // Tüm belge türleri için bildirim zamanla
         if (selectedReminders.length > 0 && Platform.OS !== 'web') {
@@ -343,10 +350,10 @@ export default function AddScreen() {
              await registerForPushNotificationsAsync();
              const [day, month, year] = formattedDate.split('.').map(Number);
              const targetDate = new Date(year, month - 1, day);
-             await scheduleReminderNotification(filename, targetDate, selectedReminders, selectedDocType.label);
+             await scheduleReminderNotification(title, targetDate, selectedReminders, selectedDocType.label);
            } catch (e) {}
         }
-        triggerCalendarPrompt(filename, selectedDocType.label);
+        triggerCalendarPrompt(title, selectedDocType.label);
       } else {
         await addManualRecord(title, amount, formattedDate, selectedCategory, selectedDocType.id, additionalText, currency);
       
@@ -434,6 +441,18 @@ export default function AddScreen() {
         </View>
 
         <View style={styles.formContainer}>
+          <Text style={styles.inputLabel}>KLASÖR SEÇİMİ (OPSİYONEL)</Text>
+          <View style={[styles.inputWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+            <Ionicons name="folder-outline" size={20} color="#6366f1" style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { color: isDark ? '#ffffff' : '#000000' }]}
+              placeholder="Örn: Ev, İş, Kişisel..."
+              placeholderTextColor={isDark ? '#71717a' : '#a1a1aa'}
+              value={folder}
+              onChangeText={setFolder}
+            />
+          </View>
+
           <Text style={styles.inputLabel}>{getDynamicTitleLabel()}</Text>
           <View style={[styles.inputWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
             <Ionicons name="text-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} style={styles.inputIcon} />
@@ -727,27 +746,55 @@ export default function AddScreen() {
               </LinearGradient>
             </BlurView>
           )}
+              {isVehicleType && selectedCategory === 'Servis / Bakım' && (
+                <Pressable 
+                  onPress={() => setShowServicePicker(true)}
+                  style={[styles.inputGroup, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#fff', marginTop: 24 }]}
+                >
+                  <Ionicons name="construct-outline" size={20} color="#f59e0b" style={styles.inputIcon} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, color: '#71717a' }}>Sonraki Bakım Tarihi</Text>
+                    <Text style={{ color: isDark ? '#fff' : '#000', fontSize: 16, fontWeight: '600' }}>
+                      {nextServiceDate ? nextServiceDate.toLocaleDateString('tr-TR') : 'Tarih Seçilmedi'}
+                    </Text>
+                  </View>
+                  <Ionicons name="calendar-outline" size={20} color={isDark ? '#a1a1aa' : '#71717a'} />
+                </Pressable>
+              )}
 
-          {/* Save Button */}
-          <View style={styles.actionRow}>
-            <Pressable style={styles.saveButton} onPress={handleSave} disabled={loading}>
-              <LinearGradient
-                colors={loading ? (isDark ? ['#3f3f46', '#27272a'] : ['#d4d4d8', '#a1a1aa']) : selectedDocType.colors}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={[styles.saveButtonGradient, loading && styles.saveButtonDisabled]}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="checkmark-circle" size={24} color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={styles.saveButtonText}>Kaydet</Text>
-                  </>
-                )}
-              </LinearGradient>
-            </Pressable>
-          </View>
+              {showServicePicker && (
+                <DateTimePicker
+                  value={nextServiceDate || new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(event, date) => {
+                    setShowServicePicker(false);
+                    if (date) setNextServiceDate(date);
+                  }}
+                />
+              )}
+            </View>
+
+        {/* Save Button */}
+        <View style={styles.actionRow}>
+          <Pressable style={styles.saveButton} onPress={handleSave} disabled={loading}>
+            <LinearGradient
+              colors={loading ? (isDark ? ['#3f3f46', '#27272a'] : ['#d4d4d8', '#a1a1aa']) : selectedDocType.colors}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={[styles.saveButtonGradient, loading && styles.saveButtonDisabled]}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={24} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.saveButtonText}>Kaydet</Text>
+                </>
+              )}
+            </LinearGradient>
+          </Pressable>
         </View>
+        <View style={{ height: 100 }} />
       </ScrollView>
     </LinearGradient>
   );
@@ -804,5 +851,19 @@ const styles = StyleSheet.create({
   resultTitle: { color: '#6366f1', fontWeight: '900', letterSpacing: 0.5, fontSize: 14, textTransform: 'uppercase' },
   resultText: { fontSize: 15, lineHeight: 26, fontWeight: '500' },
   analyzingOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', borderRadius: 26, overflow: 'hidden' },
-  analyzingText: { color: '#fff', marginTop: 12, fontWeight: '800', fontSize: 16, textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } }
+  analyzingText: { color: '#fff', marginTop: 12, fontWeight: '800', fontSize: 16, textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } },
+  inputGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 56,
+    marginBottom: 16,
+    width: '100%'
+  },
+  section: {
+    marginBottom: 32,
+    width: '100%'
+  },
 });

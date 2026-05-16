@@ -29,7 +29,7 @@ const getCurrencySymbol = (code: string) => {
   }
 };
 
-type TabType = 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'subscription';
+type TabType = 'warranty' | 'invoice' | 'vehicle' | 'konut' | 'kontrat' | 'kredi' | 'subscription';
 
 interface TabConfig {
   id: TabType;
@@ -39,15 +39,14 @@ interface TabConfig {
   color: string;
   colors: [string, string];
 }
-
 const TABS: TabConfig[] = [
-  { id: 'warranty', label: 'Garanti Belgelerim', shortLabel: 'garanti belgesi', icon: 'shield-checkmark', color: '#6366f1', colors: ['#6366f1', '#4338ca'] },
+  { id: 'warranty', label: 'Garanti', shortLabel: 'garanti', icon: 'shield-checkmark', color: '#6366f1', colors: ['#6366f1', '#4338ca'] },
   { id: 'invoice', label: 'Faturalar', shortLabel: 'fatura', icon: 'receipt', color: '#0ea5e9', colors: ['#0ea5e9', '#0284c7'] },
-  { id: 'mtv', label: 'MTV', shortLabel: 'MTV', icon: 'car-sport', color: '#f59e0b', colors: ['#f59e0b', '#d97706'] },
-  { id: 'konut', label: 'Konut Vergisi', shortLabel: 'konut vergisi', icon: 'home', color: '#10b981', colors: ['#10b981', '#059669'] },
-  { id: 'kontrat', label: 'Kontratlarım', shortLabel: 'kontrat', icon: 'document-text', color: '#8b5cf6', colors: ['#8b5cf6', '#7c3aed'] },
-  { id: 'kredi', label: 'Borç Takibi', shortLabel: 'borç', icon: 'wallet', color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
-  { id: 'subscription', label: 'Aboneliklerim', shortLabel: 'abonelik', icon: 'repeat', color: '#ec4899', colors: ['#ec4899', '#db2777'] }
+  { id: 'vehicle', label: 'Garajım', shortLabel: 'araç', icon: 'car-sport', color: '#f59e0b', colors: ['#f59e0b', '#d97706'] },
+  { id: 'konut', label: 'Konut', shortLabel: 'konut', icon: 'home', color: '#10b981', colors: ['#10b981', '#059669'] },
+  { id: 'kontrat', label: 'Kontrat', shortLabel: 'kontrat', icon: 'document-text', color: '#8b5cf6', colors: ['#8b5cf6', '#7c3aed'] },
+  { id: 'kredi', label: 'Borçlarım', shortLabel: 'borç', icon: 'wallet', color: '#ef4444', colors: ['#ef4444', '#dc2626'] },
+  { id: 'subscription', label: 'Abonelik', shortLabel: 'abonelik', icon: 'repeat', color: '#ec4899', colors: ['#ec4899', '#db2777'] }
 ];
 
 export default function HomeScreen() {
@@ -68,8 +67,18 @@ export default function HomeScreen() {
   const [isImageFull, setIsImageFull] = useState<string | false>(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState('Tümü');
   const { isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
+
+  const parseMetadata = (text: string) => {
+    const folderMatch = text?.match(/\[FOLDER:(.*?)\]/);
+    const serviceMatch = text?.match(/\[SERVICE:(.*?)\]/);
+    return {
+      folder: folderMatch ? folderMatch[1] : null,
+      serviceDate: serviceMatch ? serviceMatch[1] : null
+    };
+  };
 
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Kullanıcı';
 
@@ -257,15 +266,19 @@ export default function HomeScreen() {
     }
   };
 
-  const filteredData = warranties.filter(item => {
-    const matchesTab = searchQuery.length > 0
-      ? true
-      : (activeTab === 'warranty' ? (item.type === 'warranty' || !item.type) : item.type === activeTab);
-
-    const matchesSearch = (item.filename || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.category || '').toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTab && matchesSearch;
+  const filteredData = warranties.filter(w => {
+    const matchesTab = w.type === activeTab;
+    const matchesSearch = w.filename.toLowerCase().includes(searchQuery.toLowerCase());
+    const metadata = parseMetadata(w.raw_text);
+    const matchesFolder = selectedFolder === 'Tümü' || metadata.folder === selectedFolder;
+    return matchesTab && matchesSearch && matchesFolder;
   });
+
+  const availableFolders = ['Tümü', ...Array.from(new Set(warranties
+    .filter(w => w.type === activeTab)
+    .map(w => parseMetadata(w.raw_text).folder)
+    .filter(Boolean)
+  )) as string[]];
 
   const activeTabConfig = TABS.find(t => t.id === activeTab) || TABS[0];
 
@@ -426,6 +439,23 @@ export default function HomeScreen() {
 
             <View style={styles.cardTextContainer}>
               <Text style={[styles.productName, { color: isDark ? '#ffffff' : '#09090b' }]} numberOfLines={1}>{item.filename}</Text>
+              
+              {/* Metadata Badges (Folder & Service) */}
+              <View style={styles.badgeRow}>
+                {parseMetadata(item.raw_text).folder && (
+                  <View style={[styles.miniBadge, { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)' }]}>
+                    <Ionicons name="folder" size={10} color="#6366f1" />
+                    <Text style={[styles.miniBadgeText, { color: '#6366f1' }]}>{parseMetadata(item.raw_text).folder}</Text>
+                  </View>
+                )}
+                {parseMetadata(item.raw_text).serviceDate && (
+                  <View style={[styles.miniBadge, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245, 158, 11, 0.05)' }]}>
+                    <Ionicons name="construct" size={10} color="#f59e0b" />
+                    <Text style={[styles.miniBadgeText, { color: '#f59e0b' }]}>Bakım: {new Date(parseMetadata(item.raw_text).serviceDate!).toLocaleDateString('tr-TR')}</Text>
+                  </View>
+                )}
+              </View>
+
               <View style={styles.badgeRow}>
                 <Text style={[styles.categoryBadgeText, { color: tabCfg.color }]}>{getSubtitle(item)}</Text>
                 <View style={styles.dot} />
@@ -645,7 +675,7 @@ export default function HomeScreen() {
           {TABS.map(tab => {
             const isActive = activeTab === tab.id;
             return (
-              <Pressable key={tab.id} onPress={() => setActiveTab(tab.id)} style={({ pressed }) => [styles.tabPill, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
+              <Pressable key={tab.id} onPress={() => { setActiveTab(tab.id); setSelectedFolder('Tümü'); }} style={({ pressed }) => [styles.tabPill, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
                 {isActive ? (
                   <LinearGradient
                     colors={tab.colors}
@@ -667,6 +697,36 @@ export default function HomeScreen() {
             );
           })}
         </ScrollView>
+
+        {/* Folder Filter Chips */}
+        {availableFolders.length > 1 && (
+          <View style={{ marginTop: 12 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 8 }}>
+              {availableFolders.map((folder) => (
+                <Pressable
+                  key={folder}
+                  onPress={() => setSelectedFolder(folder)}
+                  style={[
+                    styles.folderChip,
+                    { 
+                      backgroundColor: selectedFolder === folder ? '#6366f1' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.6)'),
+                      borderColor: selectedFolder === folder ? '#6366f1' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')
+                    }
+                  ]}
+                >
+                  <Ionicons 
+                    name={folder === 'Tümü' ? 'grid-outline' : 'folder-outline'} 
+                    size={14} 
+                    color={selectedFolder === folder ? '#fff' : (isDark ? '#a1a1aa' : '#71717a')} 
+                  />
+                  <Text style={[styles.folderChipText, { color: selectedFolder === folder ? '#fff' : (isDark ? '#a1a1aa' : '#71717a') }]}>
+                    {folder}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </View>
 
       {/* Count badge */}
@@ -1420,7 +1480,7 @@ const styles = StyleSheet.create({
   iconContainer: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center' },
   cardTextContainer: { flex: 1, justifyContent: 'center' },
   productName: { fontSize: 16, fontWeight: '800', letterSpacing: -0.3, marginBottom: 4 },
-  badgeRow: { flexDirection: 'row', alignItems: 'center' },
+  // badgeRow removed here to fix duplicate error
   categoryBadgeText: { fontSize: 13, fontWeight: '700', letterSpacing: 0.2 },
   amountText: { fontSize: 14, fontWeight: '800', marginTop: 4 },
   dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#a1a1aa', marginHorizontal: 8 },
@@ -1462,4 +1522,36 @@ const styles = StyleSheet.create({
   detailTextBox: { padding: 16, borderRadius: 16, borderWidth: 1 },
   detailRawText: { fontSize: 14, fontWeight: '500', lineHeight: 22 },
   sectionTitle: { fontSize: 18, fontWeight: '800', marginBottom: 16, marginTop: 8 },
+  folderChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 6
+  },
+  folderChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 4
+  },
+  miniBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4
+  },
+  miniBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
 });

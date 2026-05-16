@@ -136,7 +136,7 @@ export const uploadInvoice = async (
   filename: string,
   mimeType: string,
   category: string,
-  documentType: 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'subscription' = 'warranty',
+  documentType: 'warranty' | 'invoice' | 'vehicle' | 'konut' | 'kontrat' | 'kredi' | 'subscription' = 'warranty',
   finalText: string,
   base64Images: string[] = [],
   amount?: number,
