@@ -1,10 +1,11 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter, useSegments } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider as NavThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, Platform } from 'react-native';
+import { Pressable, Platform, View } from 'react-native';
 import { ThemeProvider as CustomThemeProvider, useTheme } from '../src/context/ThemeContext';
+import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import CustomSplash from '../components/CustomSplash';
@@ -14,23 +15,42 @@ SplashScreen.preventAutoHideAsync();
 
 function TabLayout() {
   const { isDark, toggleTheme } = useTheme();
+  const { session, loading: authLoading } = useAuth();
   const [showSplash, setShowSplash] = useState(Platform.OS !== 'web');
   const insets = useSafeAreaInsets();
+  const segments = useSegments();
+  const router = useRouter();
 
   useEffect(() => {
-    // Native splash'i hemen kapat, yerini Custom splash alıyor
+    if (authLoading) return;
+
+    // Splash ekranını gizle
     SplashScreen.hideAsync();
 
-    // 2.5 saniye sonra custom splash'i kapat, ana sayfaya geç
+    // 2 saniye sonra custom splash'i kapat
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, []);
+    }, 2000);
 
-  // Custom splash ekranını göster
-  if (showSplash) {
+    // Auth Yönlendirmesi
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+
+    if (!session && !inAuthGroup) {
+      router.replace('/login');
+    } else if (session && inAuthGroup) {
+      router.replace('/');
+    }
+
+    return () => clearTimeout(timer);
+  }, [session, authLoading, segments]);
+
+  if (showSplash || authLoading) {
     return <CustomSplash />;
+  }
+
+  // Login ekranında tab bar gösterme
+  if (segments[0] === 'login' || segments[0] === 'register') {
+    return <Tabs screenOptions={{ headerShown: false, tabBarStyle: { display: 'none' } }} />;
   }
 
   return (
@@ -110,6 +130,9 @@ function TabLayout() {
             tabBarStyle: { display: 'none' }
           }}
         />
+        <Tabs.Screen name="login" options={{ href: null }} />
+        <Tabs.Screen name="register" options={{ href: null }} />
+        <Tabs.Screen name="profil" options={{ href: null, headerShown: false }} />
       </Tabs>
     </NavThemeProvider>
   );
@@ -117,8 +140,10 @@ function TabLayout() {
 
 export default function Layout() {
   return (
-    <CustomThemeProvider>
-      <TabLayout />
-    </CustomThemeProvider>
+    <AuthProvider>
+      <CustomThemeProvider>
+        <TabLayout />
+      </CustomThemeProvider>
+    </AuthProvider>
   );
 }

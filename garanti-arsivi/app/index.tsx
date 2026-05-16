@@ -1,19 +1,21 @@
 import {
   View, Text, StyleSheet, FlatList, ActivityIndicator,
-  RefreshControl, Animated, Pressable, Dimensions, Platform, ScrollView, Modal, Image, TextInput
+  RefreshControl, Animated, Pressable, Dimensions, Platform, ScrollView, Modal, Image, TextInput, useWindowDimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, router } from 'expo-router';
-import { fetchInvoices, deleteInvoice, updateInvoiceDetails, appendImageToInvoice, parseTurkishNumber } from '../src/services/api';
+import { fetchInvoices, deleteInvoice, updateInvoiceDetails, appendImageToInvoice, parseTurkishNumber, supabase } from '../src/services/api';
 import * as ImagePicker from 'expo-image-picker';
 import { registerForPushNotificationsAsync, scheduleReminderNotification } from '../src/services/notifications';
 import type { ReminderOption } from '../src/services/notifications';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../src/context/ThemeContext';
+import { useAuth } from '../src/context/AuthContext';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -63,11 +65,19 @@ export default function HomeScreen() {
   const [editAmount, setEditAmount] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isImageFull, setIsImageFull] = useState<string | false>(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
   const { isDark, toggleTheme } = useTheme();
+  const { user } = useAuth();
+
+  const firstName = user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Kullanıcı';
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  const { width: windowWidth } = useWindowDimensions();
+  const numColumns = Platform.OS === 'web' ? (windowWidth > 1100 ? 3 : windowWidth > 700 ? 2 : 1) : 1;
 
   const startAnimations = () => {
     fadeAnim.setValue(0);
@@ -85,7 +95,26 @@ export default function HomeScreen() {
         Animated.timing(pulseAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
       ])
     ).start();
+
+    const checkWelcome = async () => {
+      try {
+        const hasSeen = await AsyncStorage.getItem('@has_seen_onboarding');
+        if (hasSeen !== 'true') {
+          setShowWelcome(true);
+        }
+      } catch (e) {}
+    };
+    checkWelcome();
   }, []);
+
+  const closeWelcome = async () => {
+    if (dontShowAgain) {
+      try {
+        await AsyncStorage.setItem('@has_seen_onboarding', 'true');
+      } catch (e) {}
+    }
+    setShowWelcome(false);
+  };
 
   const handleAddAttachment = async (itemId: string, currentImageUrl: string | null) => {
     let res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, allowsMultipleSelection: true, quality: 0.8, base64: true });
@@ -297,6 +326,24 @@ export default function HomeScreen() {
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
+      case 'Elektronik / Bilişim': return 'hardware-chip-outline';
+      case 'Beyaz Eşya': return 'snow-outline';
+      case 'Küçük Ev Aletleri': return 'cafe-outline';
+      case 'Mobilya / Dekorasyon': return 'bed-outline';
+      case 'Giyim / Aksesuar': return 'shirt-outline';
+      case 'Oto Aksesuar / Parça': return 'construct-outline';
+      case 'Spor / Outdoor': return 'bicycle-outline';
+      case 'Elektrik': return 'flash-outline';
+      case 'Su': return 'water-outline';
+      case 'Doğalgaz': return 'flame-outline';
+      case 'İnternet / İletişim': return 'wifi-outline';
+      case 'Market / Mutfak': return 'cart-outline';
+      case 'Sağlık / Eczane': return 'medkit-outline';
+      case 'Eğitim / Kurs': return 'school-outline';
+      case 'Seyahat / Konaklama': return 'airplane-outline';
+      case 'Eğlence / Etkinlik': return 'ticket-outline';
+      
+      // Legacy Categories
       case 'Elektronik': return 'hardware-chip-outline';
       case 'Ev Aletleri': return 'home-outline';
       case 'Giyim': return 'shirt-outline';
@@ -352,7 +399,7 @@ export default function HomeScreen() {
     const tabCfg = TABS.find(t => t.id === (item.type || 'warranty')) || TABS[0];
 
     return (
-      <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+      <Animated.View style={[{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }, numColumns > 1 && { flex: 1, maxWidth: `${100 / numColumns}%`, paddingHorizontal: 6 }]}>
         <Pressable
           onPress={() => setDetailItem(item)}
           style={({ pressed }) => [
@@ -449,13 +496,15 @@ export default function HomeScreen() {
   };
 
   const renderSkeleton = () => (
-    <View style={[styles.cardContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }]}>
-      <View style={[styles.cardIndicator, { backgroundColor: isDark ? '#3f3f46' : '#e2e8f0' }]} />
-      <View style={styles.cardContent}>
-        <View style={[styles.iconContainer, { backgroundColor: isDark ? '#27272a' : '#f1f5f9' }]} />
-        <View style={styles.cardTextContainer}>
-          <View style={[styles.skeletonLine, { width: '60%', backgroundColor: isDark ? '#27272a' : '#f1f5f9' }]} />
-          <View style={[styles.skeletonLine, { width: '40%', height: 10, marginTop: 8, backgroundColor: isDark ? '#18181b' : '#f8fafc' }]} />
+    <View style={[numColumns > 1 && { flex: 1, maxWidth: `${100 / numColumns}%`, paddingHorizontal: 6 }]}>
+      <View style={[styles.cardContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }]}>
+        <View style={[styles.cardIndicator, { backgroundColor: isDark ? '#3f3f46' : '#e2e8f0' }]} />
+        <View style={styles.cardContent}>
+          <View style={[styles.iconContainer, { backgroundColor: isDark ? '#27272a' : '#f1f5f9' }]} />
+          <View style={styles.cardTextContainer}>
+            <View style={[styles.skeletonLine, { width: '60%', backgroundColor: isDark ? '#27272a' : '#f1f5f9' }]} />
+            <View style={[styles.skeletonLine, { width: '40%', height: 10, marginTop: 8, backgroundColor: isDark ? '#18181b' : '#f8fafc' }]} />
+          </View>
         </View>
       </View>
     </View>
@@ -467,12 +516,12 @@ export default function HomeScreen() {
 
       <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <View style={styles.pageHeader}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 4 }}>
               <View style={{
-                width: 54,
-                height: 54,
-                borderRadius: 27,
+                width: 50,
+                height: 50,
+                borderRadius: 25,
                 backgroundColor: '#ffffff',
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -491,22 +540,43 @@ export default function HomeScreen() {
                   resizeMode="cover"
                 />
               </View>
-              <View>
-                <Text style={[styles.pageTitle, { color: isDark ? '#ffffff' : '#09090b' }]}>Dijital Arşiv</Text>
-                <Text style={styles.pageDescription}>Belgeleriniz yapay zeka güvencesiyle saklanıyor.</Text>
+              <View style={{ flex: 1, flexShrink: 1 }}>
+                <Text 
+                  style={[styles.pageTitle, { color: isDark ? '#ffffff' : '#09090b', fontSize: 20 }]} 
+                  numberOfLines={1} 
+                  adjustsFontSizeToFit={true} 
+                  minimumFontScale={0.8}
+                >
+                  Hoş geldin, {firstName} 👋
+                </Text>
+                <Text style={[styles.pageDescription, { fontWeight: '700', color: '#6366f1' }]} numberOfLines={1}>Garanti Arşivi</Text>
               </View>
             </View>
-            <Pressable onPress={toggleTheme} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }} style={{ marginTop: 5 }}>
-              <View style={{
-                width: 44, height: 44, borderRadius: 14,
-                backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(99,102,241,0.12)',
-                justifyContent: 'center', alignItems: 'center',
-                borderWidth: 1,
-                borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(99,102,241,0.2)',
-              }}>
-                <Ionicons name={isDark ? 'sunny' : 'moon'} size={22} color={isDark ? '#f4f4f5' : '#6366f1'} />
-              </View>
-            </Pressable>
+            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+              <Pressable onPress={toggleTheme} hitSlop={10}>
+                <View style={{
+                  width: 44, height: 44, borderRadius: 14,
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(99,102,241,0.12)',
+                  justifyContent: 'center', alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(99,102,241,0.2)',
+                }}>
+                  <Ionicons name={isDark ? 'sunny' : 'moon'} size={22} color={isDark ? '#f4f4f5' : '#6366f1'} />
+                </View>
+              </Pressable>
+              
+              <Pressable onPress={() => router.push('/profil')} hitSlop={10}>
+                <View style={{
+                  width: 44, height: 44, borderRadius: 14,
+                  backgroundColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.12)',
+                  justifyContent: 'center', alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.2)',
+                }}>
+                  <Ionicons name="person-circle-outline" size={26} color={isDark ? '#a5b4fc' : '#6366f1'} />
+                </View>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Animated.View>
@@ -568,7 +638,10 @@ export default function HomeScreen() {
       </View>
 
       <FlatList
-        data={loading && !refreshing ? [1, 2, 3, 4, 5] : filteredData}
+        key={`grid-${numColumns}`}
+        data={loading && !refreshing ? [1, 2, 3, 4, 5, 6] : filteredData}
+        numColumns={numColumns}
+        columnWrapperStyle={numColumns > 1 ? { paddingHorizontal: 18, justifyContent: 'flex-start' } : undefined}
         keyExtractor={(item, index) => loading ? `skeleton-${index}` : item.id}
         renderItem={loading && !refreshing ? renderSkeleton : renderItem}
         contentContainerStyle={styles.list}
@@ -1106,11 +1179,81 @@ export default function HomeScreen() {
 
           <Image
             source={{ uri: typeof isImageFull === 'string' ? isImageFull : detailItem?.image_url?.split(',')[0] }}
-            style={{ width: width, height: height }}
+            style={{ width: windowWidth, height: height }}
             resizeMode="contain"
           />
         </View>
       </Modal>
+
+      {/* Onboarding / Welcome Modal */}
+      <Modal visible={showWelcome} transparent={true} animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: isDark ? '#18181b' : '#ffffff', borderRadius: 28, padding: 32, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 15, maxWidth: 500, alignSelf: 'center', width: '100%' }}>
+            
+            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}>
+              <Ionicons name="sparkles" size={40} color="#6366f1" />
+            </View>
+
+            <Text style={{ fontSize: 26, fontWeight: '900', color: isDark ? '#ffffff' : '#09090b', marginBottom: 12, textAlign: 'center' }}>
+              Garanti Arşivi'ne{'\n'}Hoş Geldiniz
+            </Text>
+            
+            <Text style={{ fontSize: 15, color: isDark ? '#a1a1aa' : '#71717a', textAlign: 'center', marginBottom: 32, lineHeight: 22 }}>
+              Dijital arşivinizi oluşturmak hiç bu kadar kolay olmamıştı. İşte yapabilecekleriniz:
+            </Text>
+
+            <View style={{ width: '100%', gap: 20, marginBottom: 32 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(16, 185, 129, 0.1)', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="camera" size={20} color="#10b981" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: isDark ? '#ffffff' : '#18181b' }}>Yapay Zeka ile Tarama</Text>
+                  <Text style={{ fontSize: 13, color: isDark ? '#a1a1aa' : '#71717a', marginTop: 4 }}>Fiş ve faturalarınızı okutun, verileri yapay zeka doldursun.</Text>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(239, 68, 68, 0.1)', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="notifications" size={20} color="#ef4444" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: isDark ? '#ffffff' : '#18181b' }}>Akıllı Hatırlatıcılar</Text>
+                  <Text style={{ fontSize: 13, color: isDark ? '#a1a1aa' : '#71717a', marginTop: 4 }}>Garanti veya ödeme süreleri yaklaşınca bildirim alın.</Text>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(99, 102, 241, 0.1)', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="pie-chart" size={20} color="#6366f1" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: isDark ? '#ffffff' : '#18181b' }}>Gelişmiş İstatistik</Text>
+                  <Text style={{ fontSize: 13, color: isDark ? '#a1a1aa' : '#71717a', marginTop: 4 }}>Harcamalarınızı çevirerek grafiksel olarak analiz edin.</Text>
+                </View>
+              </View>
+            </View>
+
+            <Pressable 
+              onPress={() => setDontShowAgain(!dontShowAgain)}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, alignSelf: 'flex-start' }}
+            >
+              <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: dontShowAgain ? '#6366f1' : (isDark ? '#52525b' : '#d4d4d8'), backgroundColor: dontShowAgain ? '#6366f1' : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                {dontShowAgain && <Ionicons name="checkmark" size={16} color="#fff" />}
+              </View>
+              <Text style={{ color: isDark ? '#a1a1aa' : '#71717a', fontSize: 14 }}>Bir daha gösterme</Text>
+            </Pressable>
+
+            <Pressable onPress={closeWelcome} style={{ width: '100%', borderRadius: 16, overflow: 'hidden' }}>
+              <LinearGradient colors={['#6366f1', '#4338ca']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingVertical: 18, alignItems: 'center' }}>
+                <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: 'bold' }}>Keşfetmeye Başla</Text>
+              </LinearGradient>
+            </Pressable>
+            
+          </View>
+        </View>
+      </Modal>
+
     </LinearGradient>
   );
 }
@@ -1123,7 +1266,7 @@ const styles = StyleSheet.create({
   pageDescription: { color: '#a1a1aa', fontSize: 15, fontWeight: '500', lineHeight: 22, textAlign: 'left' },
   tabWrapper: { paddingHorizontal: 24, zIndex: 10, marginBottom: 16 },
   searchWrapper: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 50, borderRadius: 15, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(99,102,241,0.1)' },
-  searchInput: { flex: 1, fontSize: 15, fontWeight: '600' },
+  searchInput: { flex: 1, fontSize: 15, fontWeight: '600', ...(Platform.OS === 'web' && { outlineStyle: 'none' } as any) },
   tabGridContent: { flexDirection: 'row', gap: 10, paddingRight: 20 },
   tabPill: { borderRadius: 24, overflow: 'hidden' },
   tabGradientActive: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 24, gap: 8, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
@@ -1161,7 +1304,7 @@ const styles = StyleSheet.create({
   deleteIconBg: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   actionBtn: { justifyContent: 'center', alignItems: 'center' },
   actionIconBg: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  editInput: { padding: 16, borderRadius: 16, fontSize: 16, fontWeight: '600' },
+  editInput: { padding: 16, borderRadius: 16, fontSize: 16, fontWeight: '600', ...(Platform.OS === 'web' && { outlineStyle: 'none' } as any) },
   saveEditBtn: { padding: 18, borderRadius: 16, alignItems: 'center', marginTop: 10 },
   saveEditBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
   emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 60 },

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Dimensions, ActivityIndicator, Platform, Pressable, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Platform, Pressable, Animated, useWindowDimensions } from 'react-native';
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Svg, { G, Path, Circle } from 'react-native-svg';
@@ -73,8 +73,6 @@ const CustomAnimatedPie = ({ data, size, isDark }: { data: any[], size: number, 
   );
 };
 
-const { width } = Dimensions.get('window');
-const CONTENT_WIDTH = width - 40;
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Elektronik': '#818cf8',
@@ -100,6 +98,9 @@ const CURRENCIES = [
 ];
 
 export default function StatsScreen() {
+  const { width: windowWidth } = useWindowDimensions();
+  const CONTENT_WIDTH = windowWidth - 40;
+
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [rates, setRates] = useState<any>(null);
@@ -334,7 +335,7 @@ export default function StatsScreen() {
                   <View style={{ flex: 1.2, alignItems: 'center', justifyContent: 'center' }}>
                     <CustomAnimatedPie 
                       data={stats.pieData} 
-                      size={width * 0.45} 
+                      size={Math.min(windowWidth * 0.45, 300)} 
                       isDark={isDark} 
                     />
                   </View>

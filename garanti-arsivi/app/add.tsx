@@ -33,12 +33,16 @@ interface DocTypeConfig {
 
 const DOC_TYPES: DocTypeConfig[] = [
   {
-    id: 'warranty', label: 'Garanti Belgesi', icon: 'shield-checkmark', colors: ['#6366f1', '#4338ca'], color: '#6366f1', categories: ['Elektronik', 'Ev Aletleri', 'Giyim', 'Diğer'], description: 'Ürün garanti belgesi',
+    id: 'warranty', label: 'Garanti Belgesi', icon: 'shield-checkmark', colors: ['#6366f1', '#4338ca'], color: '#6366f1', 
+    categories: ['Elektronik / Bilişim', 'Beyaz Eşya', 'Küçük Ev Aletleri', 'Mobilya / Dekorasyon', 'Giyim / Aksesuar', 'Oto Aksesuar / Parça', 'Spor / Outdoor', 'Diğer'], 
+    description: 'Ürün garanti belgesi',
     titleLabel: 'Ürün Adı / Marka', amountLabel: 'Fatura Tutarı', dateLabel: 'Satın Alma Tarihi'
   },
   {
-    id: 'invoice', label: 'Fatura', icon: 'receipt', colors: ['#0ea5e9', '#0284c7'], color: '#0ea5e9', categories: ['Elektrik', 'Su', 'Doğal Gaz', 'İnternet', 'Diğer'], description: 'Fatura & gider belgesi',
-    titleLabel: 'Kurum Adı', amountLabel: 'Fatura Tutarı', dateLabel: 'Son Ödeme Tarihi'
+    id: 'invoice', label: 'Fatura / Fiş', icon: 'receipt', colors: ['#0ea5e9', '#0284c7'], color: '#0ea5e9', 
+    categories: ['Elektrik', 'Su', 'Doğalgaz', 'İnternet / İletişim', 'Market / Mutfak', 'Sağlık / Eczane', 'Eğitim / Kurs', 'Seyahat / Konaklama', 'Eğlence / Etkinlik', 'Diğer'], 
+    description: 'Fatura & gider belgesi',
+    titleLabel: 'Kurum Adı', amountLabel: 'Fatura Tutarı', dateLabel: 'Son Ödeme / Fiş Tarihi'
   },
   {
     id: 'mtv', label: 'MTV Vergisi', icon: 'car-sport', colors: ['#f59e0b', '#d97706'], color: '#f59e0b', categories: ['Otomobil', 'Motosiklet', 'Kamyon', 'Diğer'], description: 'Motorlu taşıt vergisi',
@@ -760,7 +764,7 @@ const styles = StyleSheet.create({
   inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, height: 56, marginBottom: 24, width: '100%', maxWidth: '100%', overflow: 'hidden', flexShrink: 1 },
   buttonIcon: { marginRight: 8 },
   inputIcon: { marginRight: 12 },
-  input: { flex: 1, fontSize: 16, fontWeight: '500', height: '100%' },
+  input: { flex: 1, fontSize: 16, fontWeight: '500', height: '100%', ...(Platform.OS === 'web' && { outlineStyle: 'none' } as any) },
   buttonContainer: { flexDirection: 'row', width: '100%', marginBottom: 32 },
   blurButtonContainer: { borderRadius: 24, overflow: 'hidden', borderWidth: 1 },
   actionButton: { padding: 18, borderRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 8 },

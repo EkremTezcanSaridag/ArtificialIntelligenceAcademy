@@ -30,10 +30,19 @@ export interface OCRResponse {
 }
 
 export const fetchInvoices = async () => {
-  const { data, error } = await supabase
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData?.user?.id;
+
+  let query = supabase
     .from('invoices')
     .select('*')
     .order('created_at', { ascending: false });
+
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data;
@@ -184,18 +193,22 @@ export const uploadInvoice = async (
     isoDate = dueDate || null;
   }
 
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData?.user?.id;
+
   const { error: dbError } = await supabase
     .from('invoices')
     .insert([
       {
+        user_id: userId,
         filename,
-        image_url: publicUrls.join(','),
-        category,
-        type: documentType,
+        image_url: publicUrls.length > 0 ? publicUrls.join(',') : null,
         raw_text: finalText,
+        type: documentType,
+        category,
         amount: amount || 0,
         due_date: isoDate,
-        currency: currency
+        currency
       }
     ]);
 
