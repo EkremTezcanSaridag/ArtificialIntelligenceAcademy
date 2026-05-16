@@ -2,6 +2,7 @@ import {
   View, Text, StyleSheet, FlatList, ActivityIndicator,
   RefreshControl, Animated, Pressable, Dimensions, Platform, ScrollView, Modal, Image, TextInput, useWindowDimensions
 } from 'react-native';
+import Svg, { Path as SvgPath, G } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -76,7 +77,7 @@ export default function HomeScreen() {
   const slideAnim = useRef(new Animated.Value(40)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const numColumns = Platform.OS === 'web' ? (windowWidth > 1100 ? 3 : windowWidth > 700 ? 2 : 1) : 1;
 
   const startAnimations = () => {
@@ -435,6 +436,47 @@ export default function HomeScreen() {
                   {item.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {getCurrencySymbol(item.currency)}
                 </Text>
               )}
+
+              {/* Card Image with Overlay */}
+              {item.image_url && (
+                <View style={{ marginTop: 12, width: '100%', height: 120, borderRadius: 12, overflow: 'hidden', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)' }}>
+                  <Image
+                    source={{ uri: item.image_url.split(',')[0] }}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
+                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                    {(() => {
+                      const annotationsMatch = item.raw_text?.match(/\[MARKUP_DATA\]([\s\S]*)$/);
+                      if (annotationsMatch) {
+                        try {
+                          const paths = JSON.parse(annotationsMatch[1]);
+                          return (
+                            <Svg width="100%" height="100%" pointerEvents="none" viewBox={`0 0 ${windowWidth} ${windowHeight}`}>
+                              <G>
+                                {paths.map((path: any, index: number) => (
+                                  <SvgPath
+                                    key={index}
+                                    d={`M ${path.points.map((p: any) => `${p.x} ${p.y}`).join(' L ')}`}
+                                    stroke={path.color}
+                                    strokeWidth={path.width}
+                                    strokeOpacity={path.opacity}
+                                    fill="none"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                ))}
+                              </G>
+                            </Svg>
+                          );
+                        } catch (e) { return null; }
+                      }
+                      return null;
+                    })()}
+                  </View>
+                </View>
+              )}
+
               {item.type === 'kredi' && item.raw_text?.includes('Vade:') && (
                 <Pressable
                   onPress={() => {
@@ -961,7 +1003,7 @@ export default function HomeScreen() {
                     <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Belge Detayları (Yapay Zeka Analizi)</Text>
                     <View style={[styles.detailTextBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
                       <Text style={[styles.detailRawText, { color: isDark ? '#d4d4d8' : '#3f3f46' }]}>
-                        {detailItem.raw_text}
+                        {detailItem.raw_text?.replace(/\[MARKUP_DATA\][\s\S]*$/, '').trim()}
                       </Text>
                     </View>
                   </View>
@@ -979,18 +1021,49 @@ export default function HomeScreen() {
                     </View>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -24, paddingHorizontal: 24 }}>
                       <View style={{ flexDirection: 'row', gap: 12, paddingRight: 48 }}>
-                        {detailItem.image_url.split(',').filter((url: string) => url).map((url: string, index: number) => (
+                        {detailItem?.image_url?.split(',').filter((url: string) => url).map((url: string, index: number) => (
                           <Pressable
                             key={index}
                             onPress={() => setIsImageFull(url)}
                             style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, width: 280 }]}
                           >
                             <View style={[styles.detailTextBox, { padding: 4, overflow: 'hidden', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
-                              <Image
-                                source={{ uri: url }}
-                                style={{ width: '100%', height: 400, borderRadius: 12 }}
-                                resizeMode="cover"
-                              />
+                              <View style={{ width: '100%', height: 400, position: 'relative' }}>
+                                <Image
+                                  source={{ uri: url }}
+                                  style={{ width: '100%', height: '100%', borderRadius: 12 }}
+                                  resizeMode="cover"
+                                />
+                                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                                  {(() => {
+                                    const annotationsMatch = detailItem?.raw_text?.match(/\[MARKUP_DATA\]([\s\S]*)$/);
+                                    if (annotationsMatch) {
+                                      try {
+                                        const paths = JSON.parse(annotationsMatch[1]);
+                                        return (
+                                          <Svg width="100%" height="100%" pointerEvents="none" viewBox={`0 0 ${windowWidth} ${windowHeight}`}>
+                                            <G>
+                                              {paths.map((path: any, index: number) => (
+                                                <SvgPath
+                                                  key={index}
+                                                  d={`M ${path.points.map((p: any) => `${p.x} ${p.y}`).join(' L ')}`}
+                                                  stroke={path.color}
+                                                  strokeWidth={path.width}
+                                                  strokeOpacity={path.opacity}
+                                                  fill="none"
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                />
+                                              ))}
+                                            </G>
+                                          </Svg>
+                                        );
+                                      } catch (e) { return null; }
+                                    }
+                                    return null;
+                                  })()}
+                                </View>
+                              </View>
                               <View style={{ position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 20 }}>
                                 <Ionicons name="expand-outline" size={20} color="#fff" />
                               </View>
@@ -1176,12 +1249,64 @@ export default function HomeScreen() {
           >
             <Ionicons name="close" size={28} color="#fff" />
           </Pressable>
+          <Pressable
+            style={{ position: 'absolute', top: 50, left: 24, zIndex: 10, flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, backgroundColor: 'rgba(99,102,241,0.9)', gap: 8 }}
+            onPress={() => {
+              const currentImageUrl = typeof isImageFull === 'string' ? isImageFull : detailItem?.image_url?.split(',')[0];
+              const annotationsMatch = detailItem?.raw_text?.match(/\[MARKUP_DATA\]([\s\S]*)$/);
+              const annotations = annotationsMatch ? annotationsMatch[1] : '';
+              
+              setIsImageFull(false);
+              router.push({
+                pathname: '/annotate',
+                params: {
+                  imageUrl: currentImageUrl,
+                  invoiceId: detailItem?.id,
+                  existingAnnotations: annotations
+                }
+              });
+            }}
+          >
+            <Ionicons name="create" size={20} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '800' }}>İşaretle</Text>
+          </Pressable>
 
-          <Image
-            source={{ uri: typeof isImageFull === 'string' ? isImageFull : detailItem?.image_url?.split(',')[0] }}
-            style={{ width: windowWidth, height: height }}
-            resizeMode="contain"
-          />
+          <View style={{ width: windowWidth, height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+            <Image
+              source={{ uri: typeof isImageFull === 'string' ? isImageFull : detailItem?.image_url?.split(',')[0] }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+              {(() => {
+                const annotationsMatch = detailItem?.raw_text?.match(/\[MARKUP_DATA\]([\s\S]*)$/);
+                if (annotationsMatch) {
+                  try {
+                    const paths = JSON.parse(annotationsMatch[1]);
+                    return (
+                      <Svg width="100%" height="100%" pointerEvents="none">
+                        <G>
+                          {paths.map((path: any, index: number) => (
+                            <SvgPath
+                              key={index}
+                              d={`M ${path.points.map((p: any) => `${p.x} ${p.y}`).join(' L ')}`}
+                              stroke={path.color}
+                              strokeWidth={path.width}
+                              strokeOpacity={path.opacity}
+                              fill="none"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          ))}
+                        </G>
+                      </Svg>
+                    );
+                  } catch (e) { return null; }
+                }
+                return null;
+              })()}
+            </View>
+          </View>
         </View>
       </Modal>
 

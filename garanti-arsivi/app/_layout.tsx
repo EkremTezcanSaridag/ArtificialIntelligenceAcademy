@@ -32,25 +32,31 @@ function TabLayout() {
       setShowSplash(false);
     }, 2000);
 
-    // Auth Yönlendirmesi
-    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+    // Auth Yönlendirmesini güvenli hale getir
+    const timeout = setTimeout(() => {
+      if (!segments) return;
 
-    if (!session && !inAuthGroup) {
-      router.replace('/login');
-    } else if (session && inAuthGroup) {
-      router.replace('/');
-    }
+      const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
 
-    return () => clearTimeout(timer);
+      // SADECE login/register sayfasındaysa ve oturum açmışsa ana sayfaya at
+      if (session && inAuthGroup) {
+        router.replace('/');
+      } 
+      // SADECE oturum açmamışsa ve auth grubunda değilse login'e at
+      else if (!session && !inAuthGroup) {
+        router.replace('/login');
+      }
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timeout);
+    };
   }, [session, authLoading, segments]);
 
+  // Splash veya Auth yükleniyorsa bekle
   if (showSplash || authLoading) {
     return <CustomSplash />;
-  }
-
-  // Login ekranında tab bar gösterme
-  if (segments[0] === 'login' || segments[0] === 'register') {
-    return <Tabs screenOptions={{ headerShown: false, tabBarStyle: { display: 'none' } }} />;
   }
 
   return (
@@ -58,6 +64,20 @@ function TabLayout() {
       <StatusBar style={isDark ? "light" : "dark"} />
       <Tabs
         screenOptions={{
+          headerShown: segments[0] !== 'login' && segments[0] !== 'register',
+          tabBarStyle: (segments[0] === 'login' || segments[0] === 'register' || segments[0] === 'annotate' || segments[0] === 'profil') ? { display: 'none' } : {
+            backgroundColor: isDark ? '#09090b' : '#ffffff',
+            borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+            borderTopWidth: 1,
+            height: Platform.OS === 'ios' ? 80 : 55 + insets.bottom,
+            paddingBottom: Platform.OS === 'ios' ? 24 : Math.max(insets.bottom - 15, 8),
+            paddingTop: 8,
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.05,
+            shadowRadius: 10,
+          },
           headerStyle: {
             backgroundColor: 'transparent',
             borderBottomWidth: 0,
@@ -76,19 +96,6 @@ function TabLayout() {
               <Ionicons name={isDark ? "sunny" : "moon"} size={24} color={isDark ? "#ffffff" : "#000000"} />
             </Pressable>
           ),
-          tabBarStyle: {
-            backgroundColor: isDark ? '#09090b' : '#ffffff',
-            borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-            borderTopWidth: 1,
-            height: Platform.OS === 'ios' ? 80 : 55 + insets.bottom,
-            paddingBottom: Platform.OS === 'ios' ? 24 : Math.max(insets.bottom - 15, 8),
-            paddingTop: 8,
-            elevation: 8,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: 0.05,
-            shadowRadius: 10,
-          },
           tabBarActiveTintColor: '#6366f1',
           tabBarInactiveTintColor: isDark ? '#52525b' : '#a1a1aa',
           sceneStyle: { backgroundColor: isDark ? '#09090b' : '#f4f4f5' }
@@ -122,17 +129,12 @@ function TabLayout() {
           }}
         />
 
-        <Tabs.Screen
-          name="add"
-          options={{
-            title: 'Yeni Kayıt Ekle',
-            href: null,
-            tabBarStyle: { display: 'none' }
-          }}
-        />
-        <Tabs.Screen name="login" options={{ href: null }} />
-        <Tabs.Screen name="register" options={{ href: null }} />
+        {/* Gizli Rotalar */}
+        <Tabs.Screen name="login" options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="register" options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="add" options={{ href: null, headerShown: false }} />
         <Tabs.Screen name="profil" options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="annotate" options={{ href: null, headerShown: false }} />
       </Tabs>
     </NavThemeProvider>
   );

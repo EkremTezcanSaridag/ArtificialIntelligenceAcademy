@@ -19,22 +19,22 @@
 ## 🚀 Öne Çıkan Özellikler
 
 ### 🤖 Yapay Zeka (AI) Gücü
-- **Llama 4 Scout Integration**: En güncel vision modeli ile belgeleri saniyeler içinde okur.
+- **Vision AI Integration**: Belgeleri saniyeler içinde okur ve metinleri dijital veriye dönüştürür.
 - **Otomatik Veri Ayrıştırma**: Fatura tutarı, tarih ve kategorileri kendisi bulur.
-- **Hata Ayıklama**: Bozuk veya düşük kaliteli görsellerden maksimum veri çıkarımı.
 
-### 📊 Animasyonlu Analiz Paneli
-- **Custom SVG Engine**: `Reanimated` ile sıfırdan çizilen, dönerek dolan dairesel grafikler.
-- **Canlı Döviz Kurları**: Harcamalarınızı anlık kurlarla TRY, USD, EUR veya GBP cinsinden görün.
-- **Trend Takibi**: Son 6 aylık harcama alışkanlıklarınızın görsel özeti.
+### ✍️ Görsel İşaretleme (Annotation) Sistemi
+- **Belge Üzerine Çizim**: Belgelerin üzerine fosforlu kalemle notlar alabilir veya önemli alanları işaretleyebilirsiniz.
+- **Anlık Önizleme**: Yapılan çizimler anasayfadaki kartlarda ve detay sayfasında resmi büyütmeden görüntülenebilir.
+- **Kalıcı Veri**: İşaretlemeler veritabanında güvenli bir şekilde saklanır ve her cihazda senkronize görünür.
 
-### 🔔 Akıllı Bildirim Sistemi
-- Belgelerinizin süresi dolmadan **1 hafta, 2 hafta veya 1 ay önce** size haber verir.
-- Çoklu seçim desteğiyle farklı zamanlarda hatırlatıcı kurma imkanı.
+### 📊 Analiz & İstatistik Paneli
+- **Custom Grafik Motoru**: Harcamalarınızı kategorik olarak dairesel ve trend grafiklerle takip edin.
+- **Döviz Senkronizasyonu**: Tüm harcamalarınızı güncel kurlarla (USD, EUR, GBP) analiz edin.
 
-### 🌗 Premium UI/UX
-- **Karanlık Mod**: Göz yormayan şık bir gece arayüzü.
-- **Modern Tasarım**: Glassmorphism efektleri ve yumuşak geçiş animasyonları.
+### 🛡️ Güvenlik & Kullanıcı Denetimi
+- **Kullanıcı Bazlı Biyometrik Giriş**: Cihazdaki her farklı hesap için ayrı ayrı biyometrik (Parmak İzi / Yüz Tanıma) tercihi tanımlayabilme.
+- **Hesap Yönetimi**: Profil bilgileri güncelleme ve "Hesabı Kalıcı Olarak Sil" (Danger Zone) özellikleri.
+- **Gizlilik Odaklı**: Çıkış yapıldığında form alanlarının otomatik temizlenmesi ve güvenli oturum yönetimi.
 
 ---
 
@@ -43,10 +43,9 @@
 | Katman | Teknoloji | Rozet |
 |--------|-----------|-------|
 | **Frontend** | React Native (Expo) | ![React Native](https://img.shields.io/badge/-React_Native-61DAFB?style=flat-square&logo=react&logoColor=black) |
-| **Yapay Zeka** | Llama 4 Scout (Groq) | ![AI](https://img.shields.io/badge/-AI_Llama4-orange?style=flat-square&logo=probot) |
+| **İşaretleme** | React Native SVG | ![SVG](https://img.shields.io/badge/-SVG_Drawing-red?style=flat-square&logo=svg) |
+| **Güvenlik** | Expo Local Auth | ![Biometric](https://img.shields.io/badge/-Biometrics-blue?style=flat-square&logo=keycdn) |
 | **Veritabanı** | Supabase | ![Supabase](https://img.shields.io/badge/-Supabase-3ECF8E?style=flat-square&logo=supabase) |
-| **Animasyon** | Reanimated v4 | ![Reanimated](https://img.shields.io/badge/-Reanimated-blue?style=flat-square&logo=react) |
-| **Grafik** | React Native SVG | ![SVG](https://img.shields.io/badge/-SVG_Drawing-red?style=flat-square&logo=svg) |
 
 ---
 
@@ -56,13 +55,13 @@
 GarantiArsiviApp/
 ├── garanti-arsivi/
 │   ├── app/                 # Expo Router Sayfaları
-│   │   ├── stats.tsx        # 📈 Analiz & Animasyonlu Grafik
-│   │   ├── add.tsx          # ➕ AI Destekli Belge Ekleme
-│   │   └── index.tsx        # 🏠 Ana Arşiv Listesi
+│   │   ├── annotate.tsx     # ✍️ Görsel İşaretleme Ekranı
+│   │   ├── profil.tsx       # 👤 Gelişmiş Profil & Güvenlik
+│   │   ├── stats.tsx        # 📈 Analiz & Grafikler
+│   │   └── index.tsx        # 🏠 Akıllı Arşiv Listesi
 │   ├── src/
-│   │   ├── services/
-│   │   │   ├── api.ts       # 🧠 AI & DB Entegrasyonu
-│   │   │   └── notifications.ts # 🔔 Bildirim Motoru
+│   │   ├── context/         # Auth & Theme State Yönetimi
+│   │   └── services/        # AI, DB ve Biyometrik Servisler
 ```
 
 ---

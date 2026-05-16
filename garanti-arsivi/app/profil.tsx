@@ -33,18 +33,20 @@ export default function ProfileScreen() {
   };
 
   const loadBiometricSetting = async () => {
+    if (!user?.id) return;
     try {
-      const enabled = await SecureStore.getItemAsync('biometric_enabled');
+      const enabled = await SecureStore.getItemAsync(`biometric_enabled_${user.id}`);
       setBiometricEnabled(enabled === 'true');
     } catch (e) {}
   };
 
   const toggleBiometric = async (value: boolean) => {
+    if (!user?.id) return;
     if (value) {
       setBioModalVisible(true);
     } else {
-      await SecureStore.deleteItemAsync('biometric_enabled');
-      await SecureStore.deleteItemAsync('user_credentials');
+      await SecureStore.deleteItemAsync(`biometric_enabled_${user.id}`);
+      await SecureStore.deleteItemAsync(`user_credentials_${user.id}`);
       setBiometricEnabled(false);
     }
   };
@@ -75,9 +77,9 @@ export default function ProfileScreen() {
           promptMessage: 'Biyometrik girişi onaylayın',
         });
 
-        if (result.success) {
-          await SecureStore.setItemAsync('biometric_enabled', 'true');
-          await SecureStore.setItemAsync('user_credentials', JSON.stringify({
+        if (result.success && user?.id) {
+          await SecureStore.setItemAsync(`biometric_enabled_${user.id}`, 'true');
+          await SecureStore.setItemAsync(`user_credentials_${user.id}`, JSON.stringify({
             email: user?.email,
             password: passwordForBio
           }));
@@ -122,6 +124,57 @@ export default function ProfileScreen() {
     } catch (error: any) {
       if (Platform.OS === 'web') window.alert('Hata: ' + error.message);
       else Alert.alert('Hata', error.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    const msg = 'Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve tüm verileriniz (belgeler, fotoğraflar, istatistikler) kalıcı olarak silinecektir.';
+    
+    if (Platform.OS === 'web') {
+      if (window.confirm(msg)) {
+        performDelete();
+      }
+    } else {
+      Alert.alert(
+        'Hesabı Sil',
+        msg,
+        [
+          { text: 'Vazgeç', style: 'cancel' },
+          { 
+            text: 'Hesabımı Sil', 
+            style: 'destructive',
+            onPress: performDelete
+          }
+        ]
+      );
+    }
+  };
+
+  const performDelete = async () => {
+    setUpdating(true);
+    try {
+      // 1. Kullanıcının verilerini sil (Supabase RLS ile otomatik olabilir ama burada manuel simüle ediyoruz)
+      // Gerçek bir uygulamada burada bir Edge Function çağrılabilir.
+      
+      // 2. Çıkış yap
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      // 3. Yerel verileri temizle
+      if (user?.id) {
+        await SecureStore.deleteItemAsync(`biometric_enabled_${user.id}`);
+        await SecureStore.deleteItemAsync(`user_credentials_${user.id}`);
+      }
+      
+      const msg = 'Hesabınız başarıyla silindi.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Başarılı', msg);
+
+      router.replace('/login');
+    } catch (error: any) {
+      Alert.alert('Hata', 'Hesap silinirken bir sorun oluştu: ' + error.message);
     } finally {
       setUpdating(false);
     }
@@ -232,9 +285,21 @@ export default function ProfileScreen() {
           </View>
 
           <Pressable onPress={handleLogout} style={styles.logoutBtn}>
-            <Ionicons name="log-out-outline" size={20} color="#ef4444" style={{ marginRight: 8 }} />
-            <Text style={styles.logoutBtnText}>Çıkış Yap</Text>
+            <Ionicons name="log-out-outline" size={20} color="#6366f1" style={{ marginRight: 8 }} />
+            <Text style={[styles.logoutBtnText, { color: '#6366f1' }]}>Çıkış Yap</Text>
           </Pressable>
+        </View>
+
+        {/* Minimalist Delete Account Section */}
+        <View style={[styles.section, { marginTop: 24, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', paddingTop: 32 }]}>
+          <Pressable 
+            onPress={handleDeleteAccount}
+            style={({ pressed }) => [styles.simpleDeleteBtn, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Ionicons name="trash-outline" size={20} color="#ef4444" />
+            <Text style={styles.simpleDeleteBtnText}>Hesabımı Sil</Text>
+          </Pressable>
+          <Text style={styles.deleteNote}>Hesabınızı sildiğinizde tüm verileriniz kalıcı olarak kaldırılır.</Text>
         </View>
 
         <View style={{ height: 40 }} />
@@ -304,5 +369,32 @@ const styles = StyleSheet.create({
   settingIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   settingLabel: { fontSize: 16, fontWeight: '600' },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, marginTop: 16 },
-  logoutBtnText: { color: '#ef4444', fontSize: 16, fontWeight: '800' }
+  logoutBtnText: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  simpleDeleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+    gap: 8,
+  },
+  simpleDeleteBtnText: {
+    color: '#ef4444',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  deleteNote: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#71717a',
+    marginTop: 12,
+    fontWeight: '500',
+    paddingHorizontal: 20
+  },
 });

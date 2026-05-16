@@ -29,6 +29,12 @@ export default function LoginScreen() {
   const successSlideAnim = useRef(new Animated.Value(-100)).current;
 
   useEffect(() => {
+    // Bileşen yüklendiğinde her şeyi sıfırla
+    setShowSuccess(false);
+    successSlideAnim.setValue(-100);
+    setEmail(''); // E-postayı temizle
+    setPassword(''); // Şifreyi temizle
+
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true })
@@ -54,8 +60,12 @@ export default function LoginScreen() {
         const enrolled = await LocalAuthentication.isEnrolledAsync();
         setIsBiometricSupported(compatible && enrolled);
 
-        const bioEnabled = await SecureStore.getItemAsync('biometric_enabled');
-        setBiometricEnabled(bioEnabled === 'true');
+        // Son giriş yapan kullanıcının ID'sini al
+        const lastUserId = await AsyncStorage.getItem('@last_user_id');
+        if (lastUserId) {
+          const bioEnabled = await SecureStore.getItemAsync(`biometric_enabled_${lastUserId}`);
+          setBiometricEnabled(bioEnabled === 'true');
+        }
       } catch (e) {}
     };
     loadSettings();
@@ -69,17 +79,24 @@ export default function LoginScreen() {
       });
 
       if (result.success) {
-        const credentials = await SecureStore.getItemAsync('user_credentials');
+        const lastUserId = await AsyncStorage.getItem('@last_user_id');
+        if (!lastUserId) {
+          Alert.alert('Hata', 'Kayıtlı biyometrik veri bulunamadı.');
+          return;
+        }
+
+        const credentials = await SecureStore.getItemAsync(`user_credentials_${lastUserId}`);
         if (credentials) {
           const { email: savedEmail, password: savedPassword } = JSON.parse(credentials);
           setLoading(true);
-          const { error } = await supabase.auth.signInWithPassword({ email: savedEmail, password: savedPassword });
+          const { data, error } = await supabase.auth.signInWithPassword({ email: savedEmail, password: savedPassword });
           setLoading(false);
           
-          if (!error) {
+          if (!error && data.user) {
+            await AsyncStorage.setItem('@last_user_id', data.user.id);
             handleSuccess();
           } else {
-            Alert.alert('Hata', 'Biyometrik giriş başarısız: ' + error.message);
+            Alert.alert('Hata', 'Biyometrik giriş başarısız: ' + (error?.message || 'Doğrulanamadı'));
           }
         } else {
           Alert.alert('Bilgi', 'Biyometrik giriş için önce şifrenizle bir kez giriş yapmalısınız.');
@@ -98,8 +115,9 @@ export default function LoginScreen() {
     }).start();
 
     setTimeout(() => {
+      setShowSuccess(false); // Yönlendirmeden hemen önce gizle
       router.replace('/');
-    }, 1500);
+    }, 2000);
   };
 
   const handleLogin = async () => {
@@ -123,7 +141,7 @@ export default function LoginScreen() {
       }
     } catch (e) {}
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
 
     if (error) {
@@ -132,10 +150,13 @@ export default function LoginScreen() {
       } else {
         Alert.alert('Giriş Başarısız', error.message);
       }
-    } else {
-      // Giriş başarılıysa ve biyometrik aktifse kimlik bilgilerini kaydet
+    } else if (data.user) {
+      // Başarılı girişte kullanıcı ID'sini kaydet
+      await AsyncStorage.setItem('@last_user_id', data.user.id);
+      
+      // Giriş başarılıysa ve bu kullanıcı için biyometrik aktifse kimlik bilgilerini kaydet
       if (biometricEnabled) {
-        await SecureStore.setItemAsync('user_credentials', JSON.stringify({ email, password }));
+        await SecureStore.setItemAsync(`user_credentials_${data.user.id}`, JSON.stringify({ email, password }));
       }
       handleSuccess();
     }
@@ -184,6 +205,8 @@ export default function LoginScreen() {
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  autoComplete="off"
+                  textContentType="none"
                 />
               </View>
 
@@ -196,6 +219,8 @@ export default function LoginScreen() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
+                  autoComplete="off"
+                  textContentType="none"
                 />
                 <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={10} style={{ padding: 10 }}>
                   <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={isDark ? '#a1a1aa' : '#71717a'} />
@@ -213,9 +238,12 @@ export default function LoginScreen() {
                   <Text style={[styles.rememberMeText, { color: isDark ? '#a1a1aa' : '#71717a' }]}>Beni Hatırla</Text>
                 </Pressable>
 
-                {biometricEnabled && isBiometricSupported && (
-                  <Pressable onPress={handleBiometricLogin} style={styles.biometricBtn}>
-                    <Ionicons name="finger-print" size={24} color="#6366f1" />
+                {isBiometricSupported && (
+                  <Pressable 
+                    onPress={handleBiometricLogin} 
+                    style={[styles.biometricBtn, { opacity: biometricEnabled ? 1 : 0.5 }]}
+                  >
+                    <Ionicons name="finger-print" size={24} color={biometricEnabled ? "#6366f1" : (isDark ? "#52525b" : "#a1a1aa")} />
                   </Pressable>
                 )}
               </View>
