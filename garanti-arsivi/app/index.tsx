@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, router } from 'expo-router';
-import { fetchInvoices, deleteInvoice, updateInvoiceDetails, parseTurkishNumber } from '../src/services/api';
+import { fetchInvoices, deleteInvoice, updateInvoiceDetails, appendImageToInvoice, parseTurkishNumber } from '../src/services/api';
+import * as ImagePicker from 'expo-image-picker';
 import { registerForPushNotificationsAsync, scheduleReminderNotification } from '../src/services/notifications';
 import type { ReminderOption } from '../src/services/notifications';
 import { BlurView } from 'expo-blur';
@@ -61,7 +62,7 @@ export default function HomeScreen() {
   const [editTitle, setEditTitle] = useState('');
   const [editAmount, setEditAmount] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isImageFull, setIsImageFull] = useState(false);
+  const [isImageFull, setIsImageFull] = useState<string | false>(false);
   const { isDark, toggleTheme } = useTheme();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -85,6 +86,39 @@ export default function HomeScreen() {
       ])
     ).start();
   }, []);
+
+  const handleAddAttachment = async (itemId: string, currentImageUrl: string | null) => {
+    let res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, allowsMultipleSelection: true, quality: 0.8, base64: true });
+    if (!res.canceled && res.assets && res.assets.length > 0) {
+      setLoading(true);
+      try {
+        let currentUrl = currentImageUrl;
+        for (const asset of res.assets) {
+          if (asset.base64) {
+             currentUrl = await appendImageToInvoice(itemId, currentUrl, asset.base64);
+          }
+        }
+        
+        // Update local state
+        const updatedWarranties = warranties.map(w => w.id === itemId ? { ...w, image_url: currentUrl } : w);
+        setWarranties(updatedWarranties);
+        
+        if (detailItem && detailItem.id === itemId) {
+          setDetailItem({ ...detailItem, image_url: currentUrl });
+        }
+        if (editingItem && editingItem.id === itemId) {
+          setEditingItem({ ...editingItem, image_url: currentUrl });
+        }
+        
+        Alert.alert('Başarılı', 'Ek dosya(lar) eklendi.');
+      } catch (error) {
+        console.error(error);
+        Alert.alert('Hata', 'Ek dosya yüklenemedi.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -434,18 +468,35 @@ export default function HomeScreen() {
       <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <View style={styles.pageHeader}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Image 
-                source={require('../assets/images/logo-transparent.png')} 
-                style={{ width: 42, height: 42 }} 
-                resizeMode="contain"
-              />
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <View style={{
+                width: 54,
+                height: 54,
+                borderRadius: 27,
+                backgroundColor: '#ffffff',
+                justifyContent: 'center',
+                alignItems: 'center',
+                shadowColor: '#6366f1',
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 6,
+                borderWidth: 1,
+                borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                overflow: 'hidden'
+              }}>
+                <Image 
+                  source={require('../assets/images/logo-transparent.png')} 
+                  style={{ width: '100%', height: '100%' }} 
+                  resizeMode="cover"
+                />
+              </View>
               <View>
                 <Text style={[styles.pageTitle, { color: isDark ? '#ffffff' : '#09090b' }]}>Dijital Arşiv</Text>
                 <Text style={styles.pageDescription}>Belgeleriniz yapay zeka güvencesiyle saklanıyor.</Text>
               </View>
             </View>
-            <Pressable onPress={toggleTheme} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}>
+            <Pressable onPress={toggleTheme} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }} style={{ marginTop: 5 }}>
               <View style={{
                 width: 44, height: 44, borderRadius: 14,
                 backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(99,102,241,0.12)',
@@ -710,12 +761,19 @@ export default function HomeScreen() {
               <View style={{ gap: 20 }}>
                 {editingItem?.image_url && (
                   <View style={{ marginBottom: 10 }}>
-                    <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Belge Görseli</Text>
-                    <Image
-                      source={{ uri: editingItem.image_url }}
-                      style={{ width: '100%', height: 200, borderRadius: 16 }}
-                      resizeMode="cover"
-                    />
+                    <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Belge Görselleri</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -24, paddingHorizontal: 24 }}>
+                      <View style={{ flexDirection: 'row', gap: 12, paddingRight: 48 }}>
+                        {editingItem.image_url.split(',').filter((url: string) => url).map((url: string, index: number) => (
+                          <Image
+                            key={index}
+                            source={{ uri: url }}
+                            style={{ width: 280, height: 200, borderRadius: 16 }}
+                            resizeMode="cover"
+                          />
+                        ))}
+                      </View>
+                    </ScrollView>
                   </View>
                 )}
 
@@ -839,22 +897,35 @@ export default function HomeScreen() {
                 {/* Orijinal Fotoğraf Gösterimi */}
                 {detailItem?.image_url && (
                   <View style={{ marginTop: 24 }}>
-                    <Text style={[styles.detailLabel, { marginBottom: 8 }]}>Orijinal Belge Görseli</Text>
-                    <Pressable
-                      onPress={() => setIsImageFull(true)}
-                      style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
-                    >
-                      <View style={[styles.detailTextBox, { padding: 4, overflow: 'hidden', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
-                        <Image
-                          source={{ uri: detailItem.image_url }}
-                          style={{ width: '100%', height: 400, borderRadius: 12 }}
-                          resizeMode="cover"
-                        />
-                        <View style={{ position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 20 }}>
-                          <Ionicons name="expand-outline" size={20} color="#fff" />
-                        </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <Text style={[styles.detailLabel, { marginBottom: 0 }]}>Orijinal Belge Görselleri / Ekler</Text>
+                      <Pressable onPress={() => handleAddAttachment(detailItem.id, detailItem.image_url)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name="add-circle" size={18} color="#6366f1" />
+                        <Text style={{ color: '#6366f1', fontSize: 13, fontWeight: '700' }}>Ek Dosya Ekle</Text>
+                      </Pressable>
+                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -24, paddingHorizontal: 24 }}>
+                      <View style={{ flexDirection: 'row', gap: 12, paddingRight: 48 }}>
+                        {detailItem.image_url.split(',').filter((url: string) => url).map((url: string, index: number) => (
+                          <Pressable
+                            key={index}
+                            onPress={() => setIsImageFull(url)}
+                            style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, width: 280 }]}
+                          >
+                            <View style={[styles.detailTextBox, { padding: 4, overflow: 'hidden', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                              <Image
+                                source={{ uri: url }}
+                                style={{ width: '100%', height: 400, borderRadius: 12 }}
+                                resizeMode="cover"
+                              />
+                              <View style={{ position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 20 }}>
+                                <Ionicons name="expand-outline" size={20} color="#fff" />
+                              </View>
+                            </View>
+                          </Pressable>
+                        ))}
                       </View>
-                    </Pressable>
+                    </ScrollView>
                   </View>
                 )}
 
@@ -1024,7 +1095,7 @@ export default function HomeScreen() {
         </View>
       </Modal>
       {/* Full Screen Image Modal */}
-      <Modal visible={isImageFull} transparent={true} animationType="fade">
+      <Modal visible={!!isImageFull} transparent={true} animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' }}>
           <Pressable
             style={{ position: 'absolute', top: 50, right: 24, zIndex: 10, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}
@@ -1034,7 +1105,7 @@ export default function HomeScreen() {
           </Pressable>
 
           <Image
-            source={{ uri: detailItem?.image_url }}
+            source={{ uri: typeof isImageFull === 'string' ? isImageFull : detailItem?.image_url?.split(',')[0] }}
             style={{ width: width, height: height }}
             resizeMode="contain"
           />

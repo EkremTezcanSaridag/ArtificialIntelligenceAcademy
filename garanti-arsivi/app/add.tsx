@@ -67,8 +67,8 @@ export default function AddScreen() {
   const initialType = (params.type as DocType) || 'warranty';
   const initialConfig = DOC_TYPES.find(d => d.id === initialType) || DOC_TYPES[0];
 
-  const [image, setImage] = useState<string | null>(null);
-  const [base64Image, setBase64Image] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
+  const [base64Images, setBase64Images] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [selectedDocType, setSelectedDocType] = useState<DocTypeConfig>(initialConfig);
@@ -196,16 +196,17 @@ export default function AddScreen() {
   };
 
   const pickImage = async () => {
-    let res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 0.8, base64: true });
+    let res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, allowsMultipleSelection: true, quality: 0.8, base64: true });
     if (!res.canceled) { 
-        const asset = res.assets[0];
-        setImage(asset.uri); 
-        setBase64Image(asset.base64 || null);
+        const newImages = res.assets.map(a => a.uri);
+        const newBase64s = res.assets.map(a => a.base64 || '');
+        setImages(prev => [...prev, ...newImages]); 
+        setBase64Images(prev => [...prev, ...newBase64s]);
         setResult(null); 
         
-        // Yapay zeka analizi başlat
-        if (asset.base64) {
-          handleAIAnalysis(asset.uri, asset.fileName || 'galeri_resim.jpg', 'image/jpeg', asset.base64);
+        // Yapay zeka analizi sadece ilk resim için yap (eğer önceden resim yoksa)
+        if (res.assets[0].base64 && images.length === 0) {
+          handleAIAnalysis(res.assets[0].uri, res.assets[0].fileName || 'galeri_resim.jpg', 'image/jpeg', res.assets[0].base64);
         }
     }
   };
@@ -241,12 +242,12 @@ export default function AddScreen() {
     let res = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.5, base64: true });
     if (!res.canceled) { 
         const asset = res.assets[0];
-        setImage(asset.uri); 
-        setBase64Image(asset.base64 || null);
+        setImages(prev => [...prev, asset.uri]); 
+        setBase64Images(prev => [...prev, asset.base64 || '']);
         setResult(null); 
         
         // Yapay zeka analizi başlat
-        if (asset.base64) {
+        if (asset.base64 && images.length === 0) {
           handleAIAnalysis(asset.uri, 'kamera_resim.jpg', 'image/jpeg', asset.base64);
         }
     }
@@ -315,17 +316,17 @@ export default function AddScreen() {
         );
       };
 
-      if (image && base64Image) {
-        const filename = title ? `${title}` : (image.split('/').pop() || 'belge.jpg');
+      if (images.length > 0 && base64Images.length > 0) {
+        const filename = title ? `${title}` : (images[0].split('/').pop() || 'belge.jpg');
         const finalText = result ? `${additionalText}\n\n--- YAPAY ZEKA ÖZETİ ---\n${result}` : additionalText;
         const response = await uploadInvoice(
-          image, 
+          images, 
           filename, 
           'image/jpeg', 
           selectedCategory, 
           selectedDocType.id,
           finalText, 
-          base64Image,
+          base64Images,
           parseTurkishNumber(amount),
           formattedDate,
           currency
@@ -662,41 +663,48 @@ export default function AddScreen() {
           </View>
 
           {/* Belge Fotoğrafı Ekleme */}
-          <Text style={styles.sectionTitle}>Belge Fotoğrafı (İsteğe Bağlı)</Text>
+          <Text style={styles.sectionTitle}>Belge Fotoğrafları / Ek Dosyalar</Text>
           
-          {!image ? (
-            <View style={styles.buttonContainer}>
-              <Pressable onPress={pickImage} style={{ flex: 1 }}>
-                 <BlurView intensity={isDark ? 30 : 60} tint={isDark ? "dark" : "light"} style={[styles.blurButtonContainer, { borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
-                    <LinearGradient colors={isDark ? ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.01)'] : ['rgba(255,255,255,0.8)', 'rgba(255,255,255,0.4)']} style={styles.actionButtonSecondary}>
-                      <Ionicons name="images" size={24} color={isDark ? "#ffffff" : selectedDocType.color} style={{ marginRight: 12 }} />
-                      <Text style={[styles.buttonSubtitleSecondary, { color: isDark ? '#fff' : '#000', fontWeight: '700' }]}>Galeriden Seç</Text>
-                    </LinearGradient>
-                 </BlurView>
-              </Pressable>
-              
-              <Pressable onPress={takePhoto} style={{ flex: 1, marginLeft: 12 }}>
-                <LinearGradient colors={selectedDocType.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.actionButton}>
-                  <Ionicons name="camera" size={24} color="#fff" style={{ marginRight: 12 }} />
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Kamera</Text>
-                </LinearGradient>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={[styles.imageWrapper, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
-              <Image source={{ uri: image }} style={styles.image} />
-              {isAnalyzing && (
-                <View style={styles.analyzingOverlay}>
-                  <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-                  <ActivityIndicator size="large" color="#6366f1" />
-                  <Text style={styles.analyzingText}>Yapay Zeka Analiz Ediyor...</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 32 }}>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {images.map((imgUri, index) => (
+                <View key={index} style={[styles.imageWrapper, { width: 200, marginBottom: 0, borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+                  <Image source={{ uri: imgUri }} style={[styles.image, { height: 250 }]} />
+                  {index === 0 && isAnalyzing && (
+                    <View style={styles.analyzingOverlay}>
+                      <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+                      <ActivityIndicator size="large" color="#6366f1" />
+                      <Text style={[styles.analyzingText, { fontSize: 12, textAlign: 'center' }]}>Analiz Ediliyor...</Text>
+                    </View>
+                  )}
+                  <Pressable style={styles.editImageBtn} onPress={() => { 
+                    setImages(prev => prev.filter((_, i) => i !== index)); 
+                    setBase64Images(prev => prev.filter((_, i) => i !== index)); 
+                  }}>
+                    <Ionicons name="close" size={20} color="#fff" />
+                  </Pressable>
                 </View>
-              )}
-              <Pressable style={styles.editImageBtn} onPress={() => { setImage(null); setBase64Image(null); }}>
-                <Ionicons name="close" size={20} color="#fff" />
-              </Pressable>
+              ))}
+              
+              <View style={{ gap: 12, flexDirection: images.length > 0 ? 'column' : 'row' }}>
+                <Pressable onPress={pickImage} style={images.length > 0 ? {} : { flex: 1 }}>
+                  <BlurView intensity={isDark ? 30 : 60} tint={isDark ? "dark" : "light"} style={[styles.blurButtonContainer, { borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', width: images.length > 0 ? 120 : undefined, height: images.length > 0 ? 119 : 60 }]}>
+                    <LinearGradient colors={isDark ? ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.01)'] : ['rgba(255,255,255,0.8)', 'rgba(255,255,255,0.4)']} style={[styles.actionButtonSecondary, { height: '100%', flexDirection: images.length > 0 ? 'column' : 'row' }]}>
+                      <Ionicons name="images" size={24} color={isDark ? "#ffffff" : selectedDocType.color} style={{ marginRight: images.length > 0 ? 0 : 12, marginBottom: images.length > 0 ? 8 : 0 }} />
+                      <Text style={[styles.buttonSubtitleSecondary, { color: isDark ? '#fff' : '#000', fontWeight: '700', textAlign: 'center' }]}>Galeriden Seç</Text>
+                    </LinearGradient>
+                  </BlurView>
+                </Pressable>
+                
+                <Pressable onPress={takePhoto} style={images.length > 0 ? {} : { flex: 1, marginLeft: images.length === 0 ? 12 : 0 }}>
+                  <LinearGradient colors={selectedDocType.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.actionButton, { width: images.length > 0 ? 120 : undefined, height: images.length > 0 ? 119 : 60, flexDirection: images.length > 0 ? 'column' : 'row' }]}>
+                    <Ionicons name="camera" size={24} color="#fff" style={{ marginRight: images.length > 0 ? 0 : 12, marginBottom: images.length > 0 ? 8 : 0 }} />
+                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14, textAlign: 'center' }}>Kamera</Text>
+                  </LinearGradient>
+                </Pressable>
+              </View>
             </View>
-          )}
+          </ScrollView>
 
           {/* OCR Result */}
           {result && (

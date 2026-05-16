@@ -51,23 +51,27 @@ export const deleteInvoice = async (id: string) => {
 
   // Storage'daki fotoğrafı sil (varsa)
   if (record?.image_url) {
-    try {
-      const url = new URL(record.image_url);
-      // URL yapısı: .../storage/v1/object/public/invoices/dosya_adi.jpg
-      const parts = url.pathname.split('/storage/v1/object/public/invoices/');
-      if (parts.length > 1) {
-        const filePath = decodeURIComponent(parts[1]);
-        const { error: storageError } = await supabase.storage
-          .from('invoices')
-          .remove([filePath]);
-        if (storageError) {
-          console.warn('Storage silme hatası:', storageError);
-        } else {
-          console.log('✅ Fotoğraf storage\'dan silindi:', filePath);
+    const urls = record.image_url.split(',');
+    for (const urlStr of urls) {
+      if (!urlStr) continue;
+      try {
+        const url = new URL(urlStr);
+        // URL yapısı: .../storage/v1/object/public/invoices/dosya_adi.jpg
+        const parts = url.pathname.split('/storage/v1/object/public/invoices/');
+        if (parts.length > 1) {
+          const filePath = decodeURIComponent(parts[1]);
+          const { error: storageError } = await supabase.storage
+            .from('invoices')
+            .remove([filePath]);
+          if (storageError) {
+            console.warn('Storage silme hatası:', storageError);
+          } else {
+            console.log('✅ Fotoğraf storage\'dan silindi:', filePath);
+          }
         }
+      } catch (e) {
+        console.warn('Fotoğraf URL parse hatası:', e);
       }
-    } catch (e) {
-      console.warn('Fotoğraf URL parse hatası:', e);
     }
   }
 
@@ -89,49 +93,83 @@ export const updateInvoiceDetails = async (id: string, updates: any) => {
   if (error) throw error;
 };
 
+export const appendImageToInvoice = async (id: string, currentImageUrl: string | null, base64: string, mimeType: string = 'image/jpeg') => {
+  const { decode } = require('base64-arraybuffer');
+  
+  const safeFilename = `${Date.now()}_attachment.jpg`
+    .replace(/[^a-zA-Z0-9_.-]/g, '');
+
+  const { error: uploadError } = await supabase.storage
+    .from('invoices')
+    .upload(safeFilename, decode(base64), { contentType: mimeType, upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  const { data: urlData } = supabase.storage
+    .from('invoices')
+    .getPublicUrl(safeFilename);
+
+  const newUrl = urlData.publicUrl;
+  const updatedImageUrl = currentImageUrl ? `${currentImageUrl},${newUrl}` : newUrl;
+
+  const { error } = await supabase
+    .from('invoices')
+    .update({ image_url: updatedImageUrl })
+    .eq('id', id);
+
+  if (error) throw error;
+  
+  return updatedImageUrl;
+};
+
 export const uploadInvoice = async (
-  uri: string,
+  uris: string[],
   filename: string,
   mimeType: string,
   category: string,
   documentType: 'warranty' | 'invoice' | 'mtv' | 'konut' | 'kontrat' | 'kredi' | 'subscription' = 'warranty',
   finalText: string,
-  base64Image?: string | null,
+  base64Images: string[] = [],
   amount?: number,
   dueDate?: string,
   currency: string = 'TRY'
 ) => {
-  let publicUrl = '';
+  let publicUrls: string[] = [];
 
   // 1. Fotoğraf varsa Supabase Storage'a yükle
-  if (base64Image) {
-    console.log('1. Fotoğraf buluta (Supabase Storage) yükleniyor...');
-
-    // Dosya adını sanitize et (Türkçe karakter ve boşlukları temizle)
-    const safeFilename = filename
-      .replace(/[\s]/g, '_')
-      .replace(/[ığüşöçİĞÜŞÖÇ]/g, (m) => {
-        const map: Record<string, string> = {
-          'ı': 'i', 'ğ': 'g', 'ü': 'u', 'ş': 's', 'ö': 'o', 'ç': 'c',
-          'İ': 'I', 'Ğ': 'G', 'Ü': 'U', 'Ş': 'S', 'Ö': 'O', 'Ç': 'C'
-        };
-        return map[m] || m;
-      })
-      .replace(/[^a-zA-Z0-9_.-]/g, '');
-
+  if (base64Images && base64Images.length > 0) {
+    console.log('1. Fotoğraf(lar) buluta (Supabase Storage) yükleniyor...');
     const { decode } = require('base64-arraybuffer');
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('invoices')
-      .upload(safeFilename, decode(base64Image), { contentType: mimeType, upsert: true });
 
-    if (uploadError) throw uploadError;
+    for (let i = 0; i < base64Images.length; i++) {
+      const base64 = base64Images[i];
+      if (!base64) continue;
 
-    const { data: urlData } = supabase.storage
-      .from('invoices')
-      .getPublicUrl(safeFilename);
+      // Dosya adını sanitize et
+      const safeFilename = `${Date.now()}_${i}_${filename}`
+        .replace(/[\s]/g, '_')
+        .replace(/[ığüşöçİĞÜŞÖÇ]/g, (m) => {
+          const map: Record<string, string> = {
+            'ı': 'i', 'ğ': 'g', 'ü': 'u', 'ş': 's', 'ö': 'o', 'ç': 'c',
+            'İ': 'I', 'Ğ': 'G', 'Ü': 'U', 'Ş': 'S', 'Ö': 'O', 'Ç': 'C'
+          };
+          return map[m] || m;
+        })
+        .replace(/[^a-zA-Z0-9_.-]/g, '');
 
-    publicUrl = urlData.publicUrl;
-    console.log('✅ Fotoğraf başarıyla yüklendi:', publicUrl);
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('invoices')
+        .upload(safeFilename, decode(base64), { contentType: mimeType, upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('invoices')
+        .getPublicUrl(safeFilename);
+
+      publicUrls.push(urlData.publicUrl);
+    }
+    console.log('✅ Fotoğraf(lar) başarıyla yüklendi:', publicUrls);
   }
 
   // 2. Veritabanına kaydet
@@ -151,7 +189,7 @@ export const uploadInvoice = async (
     .insert([
       {
         filename,
-        image_url: publicUrl,
+        image_url: publicUrls.join(','),
         category,
         type: documentType,
         raw_text: finalText,
