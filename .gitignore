@@ -1,0 +1,13 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.db
+
+venv
+env
+
+# API anahtarları - asla GitHub'a gönderilmemeli
+.env
+.env.*
+.env*.local
