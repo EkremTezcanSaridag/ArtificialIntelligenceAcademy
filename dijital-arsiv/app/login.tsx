@@ -141,7 +141,15 @@ export default function LoginScreen() {
       }
     } catch (e) {}
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    // Demo hesap otomatik dönüştürme sihri
+    let loginEmail = email.trim();
+    let loginPassword = password;
+    if (loginEmail.toLowerCase() === 'demo' && loginPassword === 'demo') {
+      loginEmail = 'demo@demo.com';
+      loginPassword = 'demodemo';
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
     setLoading(false);
 
     if (error) {
@@ -156,7 +164,7 @@ export default function LoginScreen() {
       
       // Giriş başarılıysa ve bu kullanıcı için biyometrik aktifse kimlik bilgilerini kaydet
       if (biometricEnabled) {
-        await SecureStore.setItemAsync(`user_credentials_${data.user.id}`, JSON.stringify({ email, password }));
+        await SecureStore.setItemAsync(`user_credentials_${data.user.id}`, JSON.stringify({ email: loginEmail, password: loginPassword }));
       }
       handleSuccess();
     }

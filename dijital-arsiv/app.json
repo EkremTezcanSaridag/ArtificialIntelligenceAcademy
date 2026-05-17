@@ -47,7 +47,8 @@
     ],
     "experiments": {
       "typedRoutes": false,
-      "reactCompiler": false
+      "reactCompiler": false,
+      "baseUrl": "/dijital-arsiv"
     },
     "extra": {
       "router": {},
