@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # .env dosyasını yükle
 load_dotenv(override=True)
 
-app = FastAPI(title="Garanti Arşivi OCR API")
+app = FastAPI(title="Dijital Arşiv OCR API")
 
 # CORS ayarları - React/Expo erişimi için
 app.add_middleware(

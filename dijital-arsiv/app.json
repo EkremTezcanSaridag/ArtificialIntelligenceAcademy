@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Garanti Arşivi",
-    "slug": "garanti-arsivi",
+    "name": "Dijital Arşiv",
+    "slug": "dijital-arsiv",
     "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "garantiarsivi",
+    "scheme": "dijitalarsiv",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
@@ -19,7 +19,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.garantiarsivi"
+      "package": "com.anonymous.dijitalarsiv"
     },
     "web": {
       "bundler": "metro",

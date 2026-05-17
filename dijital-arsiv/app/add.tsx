@@ -306,7 +306,7 @@ export default function AddScreen() {
               style: 'default',
               onPress: () => {
                 const encTitle = encodeURIComponent(`${docTitle} - Hatırlatma`);
-                const encDetails = encodeURIComponent(`Garanti Arşivi: ${docTypeLabel}`);
+                const encDetails = encodeURIComponent(`Dijital Arşiv: ${docTypeLabel}`);
                 const [day, month, year] = formattedDate.split('.').map(Number);
                 const tDate = new Date(year, month - 1, day);
                 const formatGDate = (d: Date) => d.toISOString().replace(/-|:|\.\d\d\d/g,"").split('T')[0];

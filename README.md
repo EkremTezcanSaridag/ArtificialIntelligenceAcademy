@@ -52,8 +52,8 @@
 ## 📁 Proje Yapısı
 
 ```bash
-GarantiArsiviApp/
-├── garanti-arsivi/
+DijitalArsivApp/
+├── dijital-arsiv/
 │   ├── app/                 # Expo Router Sayfaları
 │   │   ├── annotate.tsx     # ✍️ Görsel İşaretleme Ekranı
 │   │   ├── profil.tsx       # 👤 Gelişmiş Profil & Güvenlik

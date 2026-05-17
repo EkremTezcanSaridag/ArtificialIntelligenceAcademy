@@ -235,7 +235,7 @@ export default function CustomSplash() {
             },
           ]}
         >
-          Garanti Arşivi
+          Dijital Arşiv
         </Animated.Text>
 
         {/* Alt başlık */}

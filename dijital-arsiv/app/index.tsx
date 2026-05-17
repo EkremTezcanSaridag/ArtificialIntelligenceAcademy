@@ -621,7 +621,7 @@ export default function HomeScreen() {
                 >
                   Hoş geldin, {firstName} 👋
                 </Text>
-                <Text style={[styles.pageDescription, { fontWeight: '700', color: '#6366f1' }]} numberOfLines={1}>Garanti Arşivi</Text>
+                <Text style={[styles.pageDescription, { fontWeight: '700', color: '#6366f1' }]} numberOfLines={1}>Dijital Arşiv</Text>
               </View>
             </View>
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
@@ -1154,7 +1154,7 @@ export default function HomeScreen() {
                   ]}
                   onPress={() => {
                     const title = encodeURIComponent(`${detailItem?.filename || 'Belge'} - Hatırlatma`);
-                    const details = encodeURIComponent(`Garanti Arşivi: ${getSubtitle(detailItem || {})}`);
+                    const details = encodeURIComponent(`Dijital Arşiv: ${getSubtitle(detailItem || {})}`);
 
                     let targetDate = new Date();
                     const rawText = detailItem?.raw_text || '';
@@ -1380,7 +1380,7 @@ export default function HomeScreen() {
             </View>
 
             <Text style={{ fontSize: 26, fontWeight: '900', color: isDark ? '#ffffff' : '#09090b', marginBottom: 12, textAlign: 'center' }}>
-              Garanti Arşivi'ne{'\n'}Hoş Geldiniz
+              Dijital Arşiv'e{'\n'}Hoş Geldiniz
             </Text>
             
             <Text style={{ fontSize: 15, color: isDark ? '#a1a1aa' : '#71717a', textAlign: 'center', marginBottom: 32, lineHeight: 22 }}>
